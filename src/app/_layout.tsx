@@ -17,6 +17,10 @@ export default function RootLayout() {
           name="book/[isbn]"
           options={{ title: "Book details", headerBackTitle: "Back" }}
         />
+        <Stack.Screen
+          name="checkout"
+          options={{ title: "Payment", headerBackTitle: "Back" }}
+        />
       </Stack>
     </ThemeProvider>
   );

@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,10 +12,9 @@ import {
   type BookOffer,
   formatPrice,
   getBookByIsbn,
-  sortedOffers,
-  totalQuantity,
 } from "@/data/books";
 import { useTheme } from "@/hooks/use-theme";
+import { useOffers } from "@/services/inventory";
 
 export default function BookDetailsScreen() {
   const { isbn } = useLocalSearchParams<{ isbn: string }>();
@@ -23,11 +22,9 @@ export default function BookDetailsScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
-  const offers = book ? sortedOffers(book) : [];
-  // Default to the best quality that has copies in stock.
-  const [selected, setSelected] = useState<BookCondition | undefined>(
-    () => offers.find((offer) => offer.quantity > 0)?.condition,
-  );
+  // Shared stock, so a purchase on the payment page shows up here.
+  const offers = useOffers(book?.isbn);
+  const [chosen, setChosen] = useState<BookCondition>();
 
   if (!book) {
     return (
@@ -41,17 +38,35 @@ export default function BookDetailsScreen() {
     );
   }
 
-  const total = totalQuantity(book);
+  const total = offers.reduce((sum, offer) => sum + offer.quantity, 0);
   const available = total > 0;
   const stockColor = available ? theme.success : theme.danger;
   const stockLabel = available
     ? `Available · ${formatCopies(total)} in stock`
     : "Not available";
 
-  const selectedOffer = offers.find((offer) => offer.condition === selected);
+  // Use the chosen quality while it has copies; otherwise fall back to the
+  // best quality still in stock (e.g. after the last copy was bought).
+  const selectedOffer =
+    offers.find((offer) => offer.condition === chosen && offer.quantity > 0) ??
+    offers.find((offer) => offer.quantity > 0);
+  const selected = selectedOffer?.condition;
   const savings = selectedOffer
     ? Math.round((1 - selectedOffer.price / book.originalPrice) * 100)
     : 0;
+
+  function handleBuy() {
+    if (!book || !selectedOffer) return;
+    router.push({
+      pathname: "/checkout",
+      params: { isbn: book.isbn, condition: selectedOffer.condition },
+    });
+  }
+
+  const canBuy = !!selectedOffer && selectedOffer.quantity > 0;
+  const buyLabel = canBuy
+    ? `Buy · ${formatPrice(selectedOffer.price)}`
+    : "Not available";
 
   return (
     <ThemedView style={styles.container}>
@@ -59,7 +74,7 @@ export default function BookDetailsScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + Spacing.four },
+          { paddingBottom: Spacing.four },
         ]}>
         <ThemedView type="backgroundElement" style={styles.cover}>
           {book.coverUrl ? (
@@ -113,7 +128,7 @@ export default function BookDetailsScreen() {
               key={offer.condition}
               offer={offer}
               selected={offer.condition === selected}
-              onSelect={() => setSelected(offer.condition)}
+              onSelect={() => setChosen(offer.condition)}
             />
           ))}
         </View>
@@ -129,6 +144,41 @@ export default function BookDetailsScreen() {
           <ThemedText>{book.description}</ThemedText>
         </View>
       </ScrollView>
+
+      <ThemedView
+        style={[
+          styles.footer,
+          {
+            borderTopColor: theme.backgroundSelected,
+            paddingBottom: insets.bottom + Spacing.three,
+          },
+        ]}>
+        <Pressable
+          onPress={handleBuy}
+          disabled={!canBuy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canBuy }}
+          accessibilityLabel={
+            canBuy
+              ? `Buy ${selectedOffer.condition} copy for ${formatPrice(selectedOffer.price)}`
+              : "Not available"
+          }
+          style={({ pressed }) => [
+            styles.buyButton,
+            {
+              backgroundColor: canBuy ? theme.text : theme.backgroundSelected,
+            },
+            pressed && styles.pressed,
+          ]}>
+          <ThemedText
+            style={[
+              styles.buyText,
+              { color: canBuy ? theme.background : theme.textSecondary },
+            ]}>
+            {buyLabel}
+          </ThemedText>
+        </Pressable>
+      </ThemedView>
     </ThemedView>
   );
 }
@@ -299,6 +349,24 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  footer: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.three,
+    paddingHorizontal: Spacing.four,
+  },
+  buyButton: {
+    width: "100%",
+    maxWidth: MaxContentWidth,
+    alignSelf: "center",
+    minHeight: 52,
+    borderRadius: Spacing.three,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buyText: {
+    fontSize: 17,
+    fontWeight: 700,
   },
   card: {
     borderRadius: Spacing.four,
