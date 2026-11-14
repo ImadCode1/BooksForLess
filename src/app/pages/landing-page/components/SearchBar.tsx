@@ -1,6 +1,5 @@
-import React from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { MUTED, TEXT } from "../theme";
+import { MUTED, TEXT } from "../../theme";
 
 interface SearchBarProps {
   value: string;

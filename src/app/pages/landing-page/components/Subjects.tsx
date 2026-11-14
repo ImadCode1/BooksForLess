@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { POPULAR_SUBJECTS } from "../data";
-import { ACCENT, TEXT } from "../theme";
+import { POPULAR_SUBJECTS } from "../../data";
+import { ACCENT, TEXT } from "../../theme";
 
 interface SubjectsProps {
   selected: string;

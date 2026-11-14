@@ -1,6 +1,5 @@
-import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ACCENT, TEXT } from "../theme";
+import { ACCENT, TEXT } from "../../theme";
 
 export default function BottomNav() {
   return (

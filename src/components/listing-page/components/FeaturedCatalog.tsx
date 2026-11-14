@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Book } from "../types";
-import { ACCENT, MUTED, TEXT } from "../theme";
-import BookCard from "./BookCard";
+import { ACCENT, MUTED, TEXT } from "../../../app/pages/theme";
+import { Book } from "../../../app/pages/types";
+import BookCard from "../../BookCard";
 
 interface FeaturedCatalogProps {
   books: Book[]; // pass the already-filtered list
@@ -13,6 +14,7 @@ export default function FeaturedCatalog({
   books,
   previewCount = 4,
 }: FeaturedCatalogProps) {
+  const router = useRouter();
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? books : books.slice(0, previewCount);
 
@@ -21,7 +23,7 @@ export default function FeaturedCatalog({
       <View style={styles.headerRow}>
         <Text style={styles.title}>Featured catalog</Text>
         {books.length > previewCount && (
-          <TouchableOpacity onPress={() => setShowAll((v) => !v)}>
+          <TouchableOpacity onPress={() => router.push("/")}>
             <Text style={styles.viewAll}>
               {showAll ? "Show less" : `View all (${books.length})`}
             </Text>

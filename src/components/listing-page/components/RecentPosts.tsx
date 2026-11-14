@@ -1,8 +1,13 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { ACCENT, MUTED, TEXT } from "../../../app/pages/theme";
+import BookCard from "../../BookCard";
 import { Book } from "../types";
-import { ACCENT, MUTED, TEXT } from "../theme";
-import BookCard from "./BookCard";
 
 interface RecentPostsProps {
   books: Book[]; // pass the already-filtered list

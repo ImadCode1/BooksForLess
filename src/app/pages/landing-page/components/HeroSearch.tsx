@@ -4,9 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import { ACCENT, MUTED, TEXT } from "../theme";
+import { ACCENT, MUTED, TEXT } from "../../theme";
 
 interface HeroSearchProps {
   value: string;

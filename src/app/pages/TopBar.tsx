@@ -1,5 +1,7 @@
+import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ACCENT, TEXT } from "../theme";
+
+import { ACCENT, TEXT } from "./theme";
 
 interface TopBarProps {
   notificationCount?: number;
@@ -12,9 +14,16 @@ export default function TopBar({
   onPressNotifications,
   onPressAccount,
 }: TopBarProps) {
+  var router = useRouter();
+
   return (
     <View style={styles.topBar}>
-      <Text style={styles.brandTitle}>
+      <Text
+        style={styles.brandTitle}
+        onPress={(e) => {
+          router.push("/");
+        }}
+      >
         BooksForLess<Text style={styles.brandDot}>.</Text>
       </Text>
       <View style={styles.actions}>

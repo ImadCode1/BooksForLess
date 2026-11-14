@@ -1,9 +1,9 @@
 import * as Device from "expo-device";
 import { Platform, StyleSheet } from "react-native";
 
-import ListingPage from "@/components/listing-page/listing-page";
 import { ThemedText } from "@/components/themed-text";
 import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
+import LandingPage from "../pages/landing-page/landing-page";
 
 function getDevMenuHint() {
   if (Platform.OS === "web") {
@@ -25,7 +25,7 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
-  return ListingPage();
+  return LandingPage();
 }
 
 const styles = StyleSheet.create({

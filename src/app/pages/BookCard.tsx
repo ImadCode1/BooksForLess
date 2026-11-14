@@ -1,7 +1,6 @@
-import React from "react";
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
-import { Book } from "../types";
-import { MUTED, TEXT, TINTS } from "../theme";
+import { MUTED, TEXT, TINTS } from "./theme";
+import { Book } from "./types";
 
 interface BookCardProps {
   book: Book;
@@ -12,7 +11,9 @@ interface BookCardProps {
 export default function BookCard({ book, index = 0, style }: BookCardProps) {
   return (
     <View style={style}>
-      <View style={[styles.image, { backgroundColor: TINTS[index % TINTS.length] }]}>
+      <View
+        style={[styles.image, { backgroundColor: TINTS[index % TINTS.length] }]}
+      >
         <View style={styles.pill}>
           <Text style={styles.pillText} numberOfLines={1}>
             {book.subject}

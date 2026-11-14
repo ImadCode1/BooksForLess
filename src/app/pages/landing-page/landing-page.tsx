@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BOOKS } from "../data";
+import TopBar from "../TopBar";
 import FeaturedCatalog from "./components/FeaturedCatalog";
 import HeroSearch from "./components/HeroSearch";
 import RecentPosts from "./components/RecentPosts";
 import Subjects from "./components/Subjects";
-import TopBar from "./components/TopBar";
-import { BOOKS } from "./data";
 
-export default function ListingPage() {
+export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
 
