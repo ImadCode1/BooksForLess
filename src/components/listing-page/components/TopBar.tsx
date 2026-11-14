@@ -4,13 +4,11 @@ import { ACCENT, TEXT } from "../theme";
 interface TopBarProps {
   notificationCount?: number;
   onPressNotifications?: () => void;
-  onPressAccount?: () => void;
 }
 
 export default function TopBar({
   notificationCount = 0,
   onPressNotifications,
-  onPressAccount,
 }: TopBarProps) {
   return (
     <View style={styles.topBar}>
@@ -29,13 +27,6 @@ export default function TopBar({
               <Text style={styles.badgeText}>{notificationCount}</Text>
             </View>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={onPressAccount}
-          accessibilityLabel="Account"
-        >
-          <Text style={styles.iconText}>👤</Text>
         </TouchableOpacity>
       </View>
     </View>

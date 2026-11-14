@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BOOKS } from "./data";
+import { useListingBooks } from "./data";
 import BottomNav from "./components/BottomNav";
 import FeaturedCatalog from "./components/FeaturedCatalog";
 import RecentPosts from "./components/RecentPosts";
@@ -12,8 +12,9 @@ import TopBar from "./components/TopBar";
 export default function ListingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
+  const books = useListingBooks();
 
-  const filteredBooks = BOOKS.filter((book) => {
+  const filteredBooks = books.filter((book) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       book.title.toLowerCase().includes(q) ||

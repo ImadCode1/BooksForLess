@@ -6,13 +6,14 @@ import HeroSearch from "./components/HeroSearch";
 import RecentPosts from "./components/RecentPosts";
 import Subjects from "./components/Subjects";
 import TopBar from "./components/TopBar";
-import { BOOKS } from "./data";
+import { useListingBooks } from "./data";
 
 export default function ListingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
+  const books = useListingBooks();
 
-  const filteredBooks = BOOKS.filter((book) => {
+  const filteredBooks = books.filter((book) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       book.title.toLowerCase().includes(q) ||

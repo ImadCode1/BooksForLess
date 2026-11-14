@@ -30,10 +30,20 @@ export default function BookDetailsScreen() {
     return (
       <ThemedView style={styles.centered}>
         <Stack.Screen options={{ title: "Not found" }} />
-        <ThemedText type="subtitle">Book not found</ThemedText>
-        <ThemedText themeColor="textSecondary">
+        <ThemedText style={styles.title}>Book not found</ThemedText>
+        <ThemedText themeColor="textSecondary" style={styles.centerText}>
           No book matches the ISBN “{isbn}”.
         </ThemedText>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.backButton,
+            { backgroundColor: theme.backgroundElement },
+            pressed && styles.pressed,
+          ]}>
+          <ThemedText type="smallBold">Go back</ThemedText>
+        </Pressable>
       </ThemedView>
     );
   }
@@ -42,8 +52,8 @@ export default function BookDetailsScreen() {
   const available = total > 0;
   const stockColor = available ? theme.success : theme.danger;
   const stockLabel = available
-    ? `Available · ${formatCopies(total)} in stock`
-    : "Not available";
+    ? `In stock · ${formatCopies(total)}`
+    : "Out of stock";
 
   // Use the chosen quality while it has copies; otherwise fall back to the
   // best quality still in stock (e.g. after the last copy was bought).
@@ -70,59 +80,88 @@ export default function BookDetailsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: book.title }} />
+      {/* The header keeps the generic "Book details" title; the book's own
+          title is shown once, next to the cover, so it never sits on top of it. */}
       <ScrollView
+        // The native header is translucent, so content scrolls under it; this
+        // pushes the content below the header and back button.
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[
           styles.content,
           { paddingBottom: Spacing.four },
         ]}>
-        <ThemedView type="backgroundElement" style={styles.cover}>
-          {book.coverUrl ? (
-            <Image
-              source={book.coverUrl}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              accessibilityLabel={`Cover of ${book.title}`}
-            />
-          ) : (
-            <ThemedText type="subtitle" themeColor="textSecondary">
-              {getInitials(book.title)}
+        <View style={styles.hero}>
+          <View style={[styles.coverShadow, { shadowColor: theme.text }]}>
+            <ThemedView type="backgroundElement" style={styles.cover}>
+              {book.coverUrl ? (
+                <Image
+                  source={book.coverUrl}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  accessibilityLabel={`Cover of ${book.title}`}
+                />
+              ) : (
+                <ThemedText style={styles.initials} themeColor="textSecondary">
+                  {getInitials(book.title)}
+                </ThemedText>
+              )}
+            </ThemedView>
+          </View>
+
+          <View style={styles.header}>
+            <ThemedText
+              type="smallBold"
+              themeColor="textSecondary"
+              style={styles.sectionLabel}>
+              {book.subject}
             </ThemedText>
-          )}
-        </ThemedView>
-
-        <View style={styles.header}>
-          <ThemedText type="subtitle">{book.title}</ThemedText>
-          <ThemedText themeColor="textSecondary">by {book.author}</ThemedText>
-        </View>
-
-        <View
-          style={[styles.stockPill, { borderColor: stockColor }]}
-          accessibilityLabel={stockLabel}>
-          <View style={[styles.stockDot, { backgroundColor: stockColor }]} />
-          <ThemedText type="smallBold" style={{ color: stockColor }}>
-            {stockLabel}
-          </ThemedText>
+            <ThemedText style={styles.title}>{book.title}</ThemedText>
+            <ThemedText themeColor="textSecondary">by {book.author}</ThemedText>
+            <View
+              style={styles.stockRow}
+              accessibilityLabel={stockLabel}>
+              <View style={[styles.stockDot, { backgroundColor: stockColor }]} />
+              <ThemedText type="small" style={{ color: stockColor }}>
+                {stockLabel}
+              </ThemedText>
+            </View>
+          </View>
         </View>
 
         {selectedOffer && (
-          <View style={styles.priceRow}>
-            <ThemedText style={styles.price}>
-              {formatPrice(selectedOffer.price)}
+          <View style={styles.priceBlock}>
+            <View style={styles.priceRow}>
+              <ThemedText style={styles.price}>
+                {formatPrice(selectedOffer.price)}
+              </ThemedText>
+              {savings > 0 && (
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: theme.success + "1A" },
+                  ]}>
+                  <ThemedText type="smallBold" style={{ color: theme.success }}>
+                    Save {savings}%
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              {selectedOffer.condition} copy · New price{" "}
+              <ThemedText
+                type="small"
+                themeColor="textSecondary"
+                style={styles.originalPrice}>
+                {formatPrice(book.originalPrice)}
+              </ThemedText>
             </ThemedText>
-            <ThemedText themeColor="textSecondary" style={styles.originalPrice}>
-              {formatPrice(book.originalPrice)}
-            </ThemedText>
-            {savings > 0 && (
-              <ThemedView type="backgroundSelected" style={styles.badge}>
-                <ThemedText type="smallBold">-{savings}%</ThemedText>
-              </ThemedView>
-            )}
           </View>
         )}
 
         <View style={styles.section} accessibilityRole="radiogroup">
-          <ThemedText type="smallBold">Choose a quality</ThemedText>
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionLabel}>
+            Choose a condition
+          </ThemedText>
           {offers.map((offer) => (
             <QualityOption
               key={offer.condition}
@@ -133,15 +172,24 @@ export default function BookDetailsScreen() {
           ))}
         </View>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <DetailRow label="ISBN" value={book.isbn} />
-          <DetailRow label="Published" value={String(book.publishedYear)} />
-          <DetailRow label="Pages" value={String(book.pages)} />
-        </ThemedView>
+        <View style={styles.section}>
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionLabel}>
+            Details
+          </ThemedText>
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <DetailRow label="ISBN" value={book.isbn} />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow label="Published" value={String(book.publishedYear)} />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow label="Pages" value={String(book.pages)} />
+          </ThemedView>
+        </View>
 
         <View style={styles.section}>
-          <ThemedText type="smallBold">Description</ThemedText>
-          <ThemedText>{book.description}</ThemedText>
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionLabel}>
+            About this book
+          </ThemedText>
+          <ThemedText style={styles.description}>{book.description}</ThemedText>
         </View>
       </ScrollView>
 
@@ -224,7 +272,7 @@ function QualityOption({
             {stockText}
           </ThemedText>
         </View>
-        <ThemedText type="smallBold">{formatPrice(offer.price)}</ThemedText>
+        <ThemedText style={styles.optionPrice}>{formatPrice(offer.price)}</ThemedText>
       </ThemedView>
     </Pressable>
   );
@@ -236,7 +284,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <ThemedText type="small" themeColor="textSecondary">
         {label}
       </ThemedText>
-      <ThemedText type="small">{value}</ThemedText>
+      <ThemedText type="smallBold" selectable>
+        {value}
+      </ThemedText>
     </View>
   );
 }
@@ -272,27 +322,59 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     alignSelf: "center",
   },
+  hero: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.four,
+  },
+  coverShadow: {
+    borderRadius: Spacing.two,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
   cover: {
-    alignSelf: "center",
-    width: 180,
+    width: 120,
     aspectRatio: 2 / 3,
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.two,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
-  header: {
-    gap: Spacing.one,
+  initials: {
+    fontSize: 32,
+    fontWeight: 700,
   },
-  stockPill: {
+  header: {
+    flex: 1,
+    gap: Spacing.two,
+    paddingTop: Spacing.one,
+  },
+  title: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: 700,
+  },
+  centerText: {
+    textAlign: "center",
+  },
+  backButton: {
+    minHeight: 44,
+    marginTop: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stockRow: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
     gap: Spacing.two,
-    borderWidth: 1,
-    borderRadius: Spacing.four,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
+    marginTop: Spacing.one,
+  },
+  priceBlock: {
+    gap: Spacing.one,
   },
   stockDot: {
     width: 8,
@@ -320,6 +402,16 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.two,
   },
+  sectionLabel: {
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  description: {
+    lineHeight: 26,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
   option: {
     flexDirection: "row",
     alignItems: "center",
@@ -333,6 +425,9 @@ const styles = StyleSheet.create({
   },
   optionText: {
     flex: 1,
+  },
+  optionPrice: {
+    fontWeight: 700,
   },
   radio: {
     width: 20,
@@ -369,13 +464,12 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   card: {
-    borderRadius: Spacing.four,
+    borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.three,
   },
 });

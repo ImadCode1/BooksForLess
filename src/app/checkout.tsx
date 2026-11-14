@@ -1,28 +1,44 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  AddressForm,
+  type AddressFormValue,
+  EMPTY_ADDRESS_FORM,
+  isAddressFormValid,
+} from "@/components/address-form";
+import { PrimaryButton } from "@/components/buttons";
+import {
   CardForm,
   type CardFormValue,
   EMPTY_CARD_FORM,
   isCardFormValid,
 } from "@/components/card-form";
+import { OptionRow } from "@/components/option-row";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
 import { type BookCondition, formatPrice, getBookByIsbn } from "@/data/books";
 import { useTheme } from "@/hooks/use-theme";
+import {
+  type Address,
+  formatAddressLine,
+  saveAddress,
+  toAddress,
+  useAddresses,
+} from "@/services/addresses";
 import { purchaseCopy, useOffers } from "@/services/inventory";
+import { addOrder } from "@/services/orders";
 import {
   describeCard,
   formatCardExpiry,
@@ -37,6 +53,10 @@ type PaymentChoice =
   | { kind: "saved"; cardId: string }
   | { kind: "new-card" }
   | { kind: "wallet"; wallet: Wallet };
+
+type AddressChoice = { kind: "saved"; addressId: string } | { kind: "new" };
+
+type Step = "payment" | "address";
 
 const WALLET_LABELS: Record<Wallet, string> = {
   "apple-pay": "Apple Pay",
@@ -62,16 +82,25 @@ export default function CheckoutScreen() {
   const book = getBookByIsbn(isbn);
   const offer = useOffers(book?.isbn).find((item) => item.condition === condition);
   const cards = useSavedCards();
+  const { addresses, defaultId } = useAddresses();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
-  const [chosen, setChosen] = useState<PaymentChoice>();
+  const [step, setStep] = useState<Step>("payment");
+  const [chosenPayment, setChosenPayment] = useState<PaymentChoice>();
   const [cardForm, setCardForm] = useState<CardFormValue>(EMPTY_CARD_FORM);
+  const [chosenAddress, setChosenAddress] = useState<AddressChoice>();
+  const [addressForm, setAddressForm] = useState<AddressFormValue>(EMPTY_ADDRESS_FORM);
   const [showAllErrors, setShowAllErrors] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>();
-  const [receipt, setReceipt] = useState<{ amount: number; method: string }>();
+  const [receipt, setReceipt] = useState<{
+    amount: number;
+    method: string;
+    address: Address;
+  }>();
 
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -90,7 +119,7 @@ export default function CheckoutScreen() {
   if (receipt) {
     return (
       <ThemedView style={[styles.centered, { paddingBottom: insets.bottom }]}>
-        <Stack.Screen options={{ title: "Payment", headerBackVisible: false }} />
+        <Stack.Screen options={{ title: "Order placed", headerBackVisible: false }} />
         <View style={[styles.successIcon, { backgroundColor: theme.success }]}>
           <ThemedText style={[styles.successCheck, { color: theme.background }]}>
             ✓
@@ -103,42 +132,92 @@ export default function CheckoutScreen() {
           You bought {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
           with {receipt.method}.
         </ThemedText>
+        <ThemedText themeColor="textSecondary" style={styles.textCenter}>
+          Ships to {receipt.address.fullName}, {formatAddressLine(receipt.address)}.
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.textCenter}>
+          You can find this order in your Profile.
+        </ThemedText>
         <PrimaryButton label="Back to book" onPress={() => router.back()} />
       </ThemedView>
     );
   }
 
+  // ----- Payment choice -----
   const hasSavedCards = cards.length > 0;
   // Without saved cards the only option is adding one.
-  const choice: PaymentChoice = !hasSavedCards
+  const payment: PaymentChoice = !hasSavedCards
     ? { kind: "new-card" }
-    : (chosen ?? { kind: "saved", cardId: cards[0].id });
-  const isChosen = (c: PaymentChoice) =>
-    c.kind === choice.kind &&
-    (c.kind !== "saved" || (choice.kind === "saved" && c.cardId === choice.cardId)) &&
-    (c.kind !== "wallet" || (choice.kind === "wallet" && c.wallet === choice.wallet));
+    : (chosenPayment ?? { kind: "saved", cardId: cards[0].id });
+  const isPaymentChosen = (c: PaymentChoice) =>
+    c.kind === payment.kind &&
+    (c.kind !== "saved" || (payment.kind === "saved" && c.cardId === payment.cardId)) &&
+    (c.kind !== "wallet" || (payment.kind === "wallet" && c.wallet === payment.wallet));
+
+  function paymentLabel(): string {
+    if (payment.kind === "new-card") return describeCard(toSavedCard(cardForm));
+    if (payment.kind === "saved") {
+      const card = cards.find((c) => c.id === payment.cardId);
+      return card ? describeCard(card) : "your card";
+    }
+    return WALLET_LABELS[payment.wallet];
+  }
+
+  // ----- Address choice -----
+  const hasSavedAddresses = addresses.length > 0;
+  const fallbackAddressId = defaultId ?? addresses[0]?.id;
+  const address: AddressChoice =
+    !hasSavedAddresses || !fallbackAddressId
+      ? { kind: "new" }
+      : (chosenAddress ?? { kind: "saved", addressId: fallbackAddressId });
+  // Default address first.
+  const orderedAddresses = [...addresses].sort(
+    (a, b) => Number(b.id === defaultId) - Number(a.id === defaultId),
+  );
 
   const inStock = offer.quantity > 0;
+
+  function goToStep(next: Step) {
+    setShowAllErrors(false);
+    setError(undefined);
+    setStep(next);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }
+
+  function handleContinue() {
+    if (payment.kind === "new-card" && !isCardFormValid(cardForm)) {
+      setShowAllErrors(true);
+      return;
+    }
+    goToStep("address");
+  }
 
   function handlePay() {
     if (!book || !offer || processing) return;
     setError(undefined);
 
-    let methodLabel: string;
-    if (choice.kind === "new-card") {
-      if (!isCardFormValid(cardForm)) {
-        setShowAllErrors(true);
-        return;
-      }
-      const card = toSavedCard(cardForm);
-      if (cardForm.save) saveCard(card);
-      methodLabel = describeCard(card);
-    } else if (choice.kind === "saved") {
-      const card = cards.find((c) => c.id === choice.cardId);
-      methodLabel = card ? describeCard(card) : "your card";
-    } else {
-      methodLabel = WALLET_LABELS[choice.wallet];
+    if (address.kind === "new" && !isAddressFormValid(addressForm)) {
+      setShowAllErrors(true);
+      return;
     }
+
+    // Resolve the payment method, saving a new card if asked to.
+    const method = paymentLabel();
+    if (payment.kind === "new-card" && cardForm.save) saveCard(toSavedCard(cardForm));
+
+    // Resolve the address, saving a new one if asked to.
+    let shippingAddress: Address | undefined;
+    if (address.kind === "new") {
+      shippingAddress = toAddress(addressForm);
+      if (addressForm.save) saveAddress(shippingAddress);
+    } else {
+      shippingAddress = addresses.find((a) => a.id === address.addressId);
+    }
+    if (!shippingAddress) {
+      setError("Please choose a delivery address.");
+      return;
+    }
+    const shipTo = shippingAddress;
 
     // TODO: charge through a real payment provider instead of simulating it.
     setProcessing(true);
@@ -146,7 +225,15 @@ export default function CheckoutScreen() {
     timer.current = setTimeout(() => {
       setProcessing(false);
       if (purchaseCopy(book.isbn, offer.condition)) {
-        setReceipt({ amount, method: methodLabel });
+        addOrder({
+          isbn: book.isbn,
+          title: book.title,
+          condition: offer.condition,
+          price: amount,
+          paymentMethod: method,
+          shippingAddress: shipTo,
+        });
+        setReceipt({ amount, method, address: shipTo });
       } else {
         setError("Sorry, this copy just sold out. You have not been charged.");
       }
@@ -159,10 +246,17 @@ export default function CheckoutScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
       <ThemedView style={styles.flex}>
-        <Stack.Screen options={{ title: "Payment" }} />
+        <Stack.Screen options={{ title: step === "payment" ? "Payment" : "Delivery" }} />
         <ScrollView
+          ref={scrollRef}
+          contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled">
+          <ThemedText type="small" themeColor="textSecondary">
+            Step {step === "payment" ? 1 : 2} of 2 ·{" "}
+            {step === "payment" ? "Payment method" : "Delivery address"}
+          </ThemedText>
+
           <ThemedView type="backgroundElement" style={styles.summary}>
             <View style={styles.flex}>
               <ThemedText type="smallBold">{book.title}</ThemedText>
@@ -181,60 +275,122 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {hasSavedCards ? (
-            <>
-              <View style={styles.section} accessibilityRole="radiogroup">
-                <ThemedText type="smallBold">Pay with a saved card</ThemedText>
-                {cards.map((card) => (
-                  <OptionRow
-                    key={card.id}
-                    title={describeCard(card)}
-                    subtitle={`${card.holderName} · Expires ${formatCardExpiry(card)}`}
-                    selected={isChosen({ kind: "saved", cardId: card.id })}
-                    onSelect={() => setChosen({ kind: "saved", cardId: card.id })}
-                  />
-                ))}
-              </View>
+          {step === "payment" ? (
+            hasSavedCards ? (
+              <>
+                <View style={styles.section} accessibilityRole="radiogroup">
+                  <ThemedText type="smallBold">Pay with a saved card</ThemedText>
+                  {cards.map((card) => (
+                    <OptionRow
+                      key={card.id}
+                      title={describeCard(card)}
+                      subtitle={`${card.holderName} · Expires ${formatCardExpiry(card)}`}
+                      selected={isPaymentChosen({ kind: "saved", cardId: card.id })}
+                      onSelect={() => setChosenPayment({ kind: "saved", cardId: card.id })}
+                    />
+                  ))}
+                </View>
 
-              <View style={styles.section} accessibilityRole="radiogroup">
-                <ThemedText type="smallBold">Or pay another way</ThemedText>
-                <OptionRow
-                  title="New card"
-                  subtitle="Credit or debit card"
-                  selected={isChosen({ kind: "new-card" })}
-                  onSelect={() => setChosen({ kind: "new-card" })}
+                <View style={styles.section} accessibilityRole="radiogroup">
+                  <ThemedText type="smallBold">Or pay another way</ThemedText>
+                  <OptionRow
+                    title="New card"
+                    subtitle="Credit or debit card"
+                    selected={isPaymentChosen({ kind: "new-card" })}
+                    onSelect={() => setChosenPayment({ kind: "new-card" })}
+                  />
+                  {payment.kind === "new-card" && (
+                    <CardForm
+                      value={cardForm}
+                      onChange={setCardForm}
+                      showAllErrors={showAllErrors}
+                    />
+                  )}
+                  {WALLETS.map((wallet) => (
+                    <OptionRow
+                      key={wallet}
+                      title={WALLET_LABELS[wallet]}
+                      selected={isPaymentChosen({ kind: "wallet", wallet })}
+                      onSelect={() => setChosenPayment({ kind: "wallet", wallet })}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View style={styles.section}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  Add a card
+                </ThemedText>
+                <ThemedText themeColor="textSecondary">
+                  You don&apos;t have a saved card yet. Add one to complete your purchase.
+                </ThemedText>
+                <CardForm
+                  value={cardForm}
+                  onChange={setCardForm}
+                  showAllErrors={showAllErrors}
                 />
-                {choice.kind === "new-card" && (
-                  <CardForm
-                    value={cardForm}
-                    onChange={setCardForm}
+              </View>
+            )
+          ) : (
+            <>
+              <ThemedView type="backgroundElement" style={styles.summary}>
+                <View style={styles.flex}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Paying with
+                  </ThemedText>
+                  <ThemedText type="smallBold">{paymentLabel()}</ThemedText>
+                </View>
+                <Pressable
+                  onPress={() => goToStep("payment")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Change payment method"
+                  hitSlop={8}>
+                  <ThemedText type="linkPrimary">Change</ThemedText>
+                </Pressable>
+              </ThemedView>
+
+              {hasSavedAddresses ? (
+                <View style={styles.section} accessibilityRole="radiogroup">
+                  <ThemedText type="smallBold">Deliver to</ThemedText>
+                  {orderedAddresses.map((a) => (
+                    <OptionRow
+                      key={a.id}
+                      title={a.fullName}
+                      subtitle={formatAddressLine(a)}
+                      badge={a.id === defaultId ? "Default" : undefined}
+                      selected={address.kind === "saved" && address.addressId === a.id}
+                      onSelect={() => setChosenAddress({ kind: "saved", addressId: a.id })}
+                    />
+                  ))}
+                  <OptionRow
+                    title="New address"
+                    selected={address.kind === "new"}
+                    onSelect={() => setChosenAddress({ kind: "new" })}
+                  />
+                  {address.kind === "new" && (
+                    <AddressForm
+                      value={addressForm}
+                      onChange={setAddressForm}
+                      showAllErrors={showAllErrors}
+                    />
+                  )}
+                </View>
+              ) : (
+                <View style={styles.section}>
+                  <ThemedText type="subtitle" style={styles.sectionTitle}>
+                    Add a delivery address
+                  </ThemedText>
+                  <ThemedText themeColor="textSecondary">
+                    Where should we send your book?
+                  </ThemedText>
+                  <AddressForm
+                    value={addressForm}
+                    onChange={setAddressForm}
                     showAllErrors={showAllErrors}
                   />
-                )}
-                {WALLETS.map((wallet) => (
-                  <OptionRow
-                    key={wallet}
-                    title={WALLET_LABELS[wallet]}
-                    selected={isChosen({ kind: "wallet", wallet })}
-                    onSelect={() => setChosen({ kind: "wallet", wallet })}
-                  />
-                ))}
-              </View>
+                </View>
+              )}
             </>
-          ) : (
-            <View style={styles.section}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Add a card
-              </ThemedText>
-              <ThemedText themeColor="textSecondary">
-                You don&apos;t have a saved card yet. Add one to complete your purchase.
-              </ThemedText>
-              <CardForm
-                value={cardForm}
-                onChange={setCardForm}
-                showAllErrors={showAllErrors}
-              />
-            </View>
           )}
         </ScrollView>
 
@@ -246,93 +402,21 @@ export default function CheckoutScreen() {
               paddingBottom: insets.bottom + Spacing.three,
             },
           ]}>
-          <PrimaryButton
-            label={inStock ? `Pay ${formatPrice(offer.price)}` : "Sold out"}
-            onPress={handlePay}
-            disabled={!inStock}
-            loading={processing}
-          />
+          {!inStock ? (
+            <PrimaryButton label="Sold out" onPress={() => {}} disabled />
+          ) : step === "payment" ? (
+            <PrimaryButton label="Continue" onPress={handleContinue} />
+          ) : (
+            <PrimaryButton
+              label={`Pay ${formatPrice(offer.price)}`}
+              onPress={handlePay}
+              loading={processing}
+              loadingLabel="Processing payment"
+            />
+          )}
         </ThemedView>
       </ThemedView>
     </KeyboardAvoidingView>
-  );
-}
-
-function OptionRow({
-  title,
-  subtitle,
-  selected,
-  onSelect,
-}: {
-  title: string;
-  subtitle?: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={onSelect}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={selected ? "backgroundSelected" : "backgroundElement"}
-        style={[styles.option, { borderColor: selected ? theme.text : "transparent" }]}>
-        <View style={[styles.radio, { borderColor: theme.textSecondary }]}>
-          {selected && <View style={[styles.radioDot, { backgroundColor: theme.text }]} />}
-        </View>
-        <View style={styles.flex}>
-          <ThemedText type="smallBold">{title}</ThemedText>
-          {subtitle && (
-            <ThemedText type="small" themeColor="textSecondary">
-              {subtitle}
-            </ThemedText>
-          )}
-        </View>
-      </ThemedView>
-    </Pressable>
-  );
-}
-
-function PrimaryButton({
-  label,
-  onPress,
-  disabled = false,
-  loading = false,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  const theme = useTheme();
-  const inactive = disabled || loading;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={inactive}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: inactive, busy: loading }}
-      accessibilityLabel={loading ? "Processing payment" : label}
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: disabled ? theme.backgroundSelected : theme.text },
-        pressed && styles.pressed,
-      ]}>
-      {loading ? (
-        <ActivityIndicator color={theme.background} />
-      ) : (
-        <ThemedText
-          style={[
-            styles.buttonText,
-            { color: disabled ? theme.textSecondary : theme.background },
-          ]}>
-          {label}
-        </ThemedText>
-      )}
-    </Pressable>
   );
 }
 
@@ -388,46 +472,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 30,
   },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: 1,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: Spacing.three,
     paddingHorizontal: Spacing.four,
-  },
-  button: {
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    alignSelf: "center",
-    minHeight: 52,
-    borderRadius: Spacing.three,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    fontSize: 17,
-    fontWeight: 700,
   },
 });

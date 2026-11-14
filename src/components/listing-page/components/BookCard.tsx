@@ -1,5 +1,6 @@
+import { router } from "expo-router";
 import React from "react";
-import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Book } from "../types";
 import { MUTED, TEXT, TINTS } from "../theme";
 
@@ -10,8 +11,17 @@ interface BookCardProps {
 }
 
 export default function BookCard({ book, index = 0, style }: BookCardProps) {
+  const priceLabel = book.price === null ? "Sold out" : `$${book.price.toFixed(2)}`;
+
   return (
-    <View style={style}>
+    <Pressable
+      style={({ pressed }) => [style, pressed && styles.pressed]}
+      onPress={() =>
+        router.push({ pathname: "/book/[isbn]", params: { isbn: book.isbn } })
+      }
+      accessibilityRole="button"
+      accessibilityLabel={`${book.title} by ${book.author}, ${priceLabel}`}
+      accessibilityHint="Opens the book's page">
       <View style={[styles.image, { backgroundColor: TINTS[index % TINTS.length] }]}>
         <View style={styles.pill}>
           <Text style={styles.pillText} numberOfLines={1}>
@@ -28,13 +38,22 @@ export default function BookCard({ book, index = 0, style }: BookCardProps) {
       </Text>
       <View style={styles.meta}>
         <Text style={styles.pages}>{book.pages} p.</Text>
-        <Text style={styles.price}>${book.price.toFixed(2)}</Text>
+        <Text style={[styles.price, book.price === null && styles.soldOut]}>
+          {priceLabel}
+        </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.7,
+  },
+  soldOut: {
+    color: MUTED,
+    fontWeight: "600",
+  },
   image: {
     height: 118,
     borderRadius: 12,

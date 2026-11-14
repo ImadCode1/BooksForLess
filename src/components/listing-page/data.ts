@@ -1,115 +1,30 @@
+import { useMemo } from "react";
+
+import { BOOKS as ALL_BOOKS } from "@/data/books";
+import { lowestAvailablePrice, useStock } from "@/services/inventory";
+
 import { Book, Subject } from "./types";
 
-export const BOOKS: Book[] = [
-  {
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    price: 45.99,
-    isbn: "978-0132350884",
-    pages: 464,
-    subject: "Computer Science",
-    date: "2008",
-  },
-  {
-    title: "Introduction to Algorithms",
-    author: "Thomas H. Cormen",
-    price: 89.99,
-    isbn: "978-0262033848",
-    pages: 1312,
-    subject: "Computer Science",
-    date: "2009",
-  },
-  {
-    title: "Design Patterns",
-    author: "Erich Gamma",
-    price: 54.99,
-    isbn: "978-0201633610",
-    pages: 395,
-    subject: "Software Engineering",
-    date: "1994",
-  },
-  {
-    title: "Artificial Intelligence: A Modern Approach",
-    author: "Stuart Russell",
-    price: 110.0,
-    isbn: "978-0136042594",
-    pages: 1152,
-    subject: "Artificial Intelligence",
-    date: "2020",
-  },
-  {
-    title: "Computer Systems: A Programmer's Perspective",
-    author: "Randal E. Bryant",
-    price: 95.5,
-    isbn: "978-0134092669",
-    pages: 1120,
-    subject: "Computer Engineering",
-    date: "2015",
-  },
-  {
-    title: "Database System Concepts",
-    author: "Abraham Silberschatz",
-    price: 85.0,
-    isbn: "978-0073523323",
-    pages: 1376,
-    subject: "Databases",
-    date: "2019",
-  },
-  {
-    title: "Operating System Concepts",
-    author: "Abraham Silberschatz",
-    price: 92.0,
-    isbn: "978-1118063330",
-    pages: 976,
-    subject: "Operating Systems",
-    date: "2018",
-  },
-  {
-    title: "Calculus",
-    author: "James Stewart",
-    price: 120.0,
-    isbn: "978-1285740621",
-    pages: 1368,
-    subject: "Mathematics",
-    date: "2015",
-  },
-  {
-    title: "University Physics",
-    author: "Hugh D. Young",
-    price: 105.0,
-    isbn: "978-0321973610",
-    pages: 1596,
-    subject: "Physics",
-    date: "2015",
-  },
-  {
-    title: "Computer Networking: A Top-Down Approach",
-    author: "James Kurose",
-    price: 98.0,
-    isbn: "978-0133594140",
-    pages: 864,
-    subject: "Networking",
-    date: "2016",
-  },
-  {
-    title: "Software Engineering: A Practitioner's Approach",
-    author: "Roger S. Pressman",
-    price: 115.0,
-    isbn: "978-0078022128",
-    pages: 928,
-    subject: "Software Engineering",
-    date: "2014",
-  },
-  {
-    title: "The Pragmatic Programmer",
-    author: "David Thomas",
-    price: 49.99,
-    isbn: "978-0203062916",
-    pages: 352,
-    subject: "Software Engineering",
-    date: "2019",
-  },
-];
+/**
+ * Home's book cards, built from the app's single book list (src/data/books.ts)
+ * and live stock, so prices and "Sold out" stay in sync with the book page.
+ */
+export function useListingBooks(): Book[] {
+  const stock = useStock();
+  return useMemo(
+    () =>
+      ALL_BOOKS.map((book) => ({
+        title: book.title,
+        author: book.author,
+        price: lowestAvailablePrice(stock.get(book.isbn) ?? []),
+        isbn: book.isbn,
+        pages: book.pages,
+        subject: book.subject,
+        date: String(book.publishedYear),
+      })),
+    [stock],
+  );
+}
 
 // 6 popular subjects, shown as a 2-row x 3-column grid
 export const POPULAR_SUBJECTS: Subject[] = [

@@ -26,30 +26,9 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="barcode.viewfinder" md="barcode_scanner" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require("@/assets/images/tabIcons/explore.png")}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="sell">
-        <NativeTabs.Trigger.Label>Sell</NativeTabs.Trigger.Label>
-        {/* TODO: replace with a dedicated sell icon */}
-        <NativeTabs.Trigger.Icon
-          src={require("@/assets/images/tabIcons/explore.png")}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="Buy">
-        <NativeTabs.Trigger.Label>Buy</NativeTabs.Trigger.Label>
-        {/* TODO: replace with a dedicated sell icon */}
-        <NativeTabs.Trigger.Icon
-          src={require("@/assets/images/tabIcons/explore.png")}
-          renderingMode="template"
-        />
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.crop.circle" md="person" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

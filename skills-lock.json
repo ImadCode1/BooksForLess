@@ -1,6 +1,41 @@
 {
   "version": 2,
   "skills": {
+    "expo-data-fetching": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-data-fetching/SKILL.md",
+      "computedHash": "5566b445229ee4751aca90f0f08e06af0c53aa16d2227f20e9137c264cb9bc6e",
+      "installMode": "copy"
+    },
+    "expo-design-system": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-design-system/SKILL.md",
+      "computedHash": "e2fe37e041433e6f73702cc7dd8e8f2736c5e6fa62ce32cccc630c5f4ce76309",
+      "installMode": "copy"
+    },
+    "expo-native-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
+      "computedHash": "500813b2c531ea88b2cc72206ff395c4453a15cc679b14cd78bf5116923ad541",
+      "installMode": "copy"
+    },
+    "expo-overview": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-overview/SKILL.md",
+      "computedHash": "06a4c16a5e14819b54fd419f2009119ffcb6f8694b067ad589255cf03f5c6671",
+      "installMode": "copy"
+    },
+    "expo-router": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-router/SKILL.md",
+      "computedHash": "9c3a05a145ceec25ccca5c733b9403b03c7174c60c48c017009c2c5a1a68c8cb",
+      "installMode": "copy"
+    },
     "mobile-app-ui-design": {
       "source": "ceorkm/mobile-app-ui-design",
       "sourceType": "github",

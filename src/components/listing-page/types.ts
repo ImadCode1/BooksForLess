@@ -1,7 +1,8 @@
 export interface Book {
   title: string;
   author: string;
-  price: number;
+  /** Cheapest price in stock, or null when sold out. */
+  price: number | null;
   isbn: string;
   pages: number;
   subject: string;
