@@ -11,8 +11,9 @@ import Subjects from "./components/Subjects";
 export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
+  const books = BOOKS;
 
-  const filteredBooks = BOOKS.filter((book) => {
+  const filteredBooks = books.filter((book) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       book.title.toLowerCase().includes(q) ||

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { StyleSheet, Switch, TextInput, type TextInputProps, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
 
+import { LabeledInput } from "@/components/labeled-input";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
@@ -51,11 +52,14 @@ export function CardForm({
   value,
   onChange,
   showAllErrors = false,
+  showSaveToggle = true,
 }: {
   value: CardFormValue;
   onChange: (value: CardFormValue) => void;
   /** Show errors on every field, e.g. after the user tried to pay. */
   showAllErrors?: boolean;
+  /** Hide when the card is always saved (e.g. on the Profile page). */
+  showSaveToggle?: boolean;
 }) {
   const theme = useTheme();
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
@@ -118,49 +122,18 @@ export function CardForm({
           />
         </View>
       </View>
-      <View style={styles.saveRow}>
-        <ThemedText type="small" style={styles.flex}>
-          Save this card for next time
-        </ThemedText>
-        <Switch
-          value={value.save}
-          onValueChange={(save) => update({ save })}
-          trackColor={{ true: theme.success, false: theme.backgroundSelected }}
-          accessibilityLabel="Save this card for next time"
-        />
-      </View>
-    </View>
-  );
-}
-
-function LabeledInput({
-  label,
-  error,
-  ...props
-}: TextInputProps & { label: string; error?: string }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.field}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <TextInput
-        {...props}
-        accessibilityLabel={label}
-        placeholderTextColor={theme.textSecondary}
-        style={[
-          styles.input,
-          {
-            color: theme.text,
-            backgroundColor: theme.backgroundElement,
-            borderColor: error ? theme.danger : theme.backgroundSelected,
-          },
-        ]}
-      />
-      {error && (
-        <ThemedText type="small" style={{ color: theme.danger }}>
-          {error}
-        </ThemedText>
+      {showSaveToggle && (
+        <View style={styles.saveRow}>
+          <ThemedText type="small" style={styles.flex}>
+            Save this card for next time
+          </ThemedText>
+          <Switch
+            value={value.save}
+            onValueChange={(save) => update({ save })}
+            trackColor={{ true: theme.success, false: theme.backgroundSelected }}
+            accessibilityLabel="Save this card for next time"
+          />
+        </View>
       )}
     </View>
   );
@@ -176,16 +149,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  field: {
-    gap: Spacing.one,
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    fontSize: 16,
   },
   saveRow: {
     flexDirection: "row",
