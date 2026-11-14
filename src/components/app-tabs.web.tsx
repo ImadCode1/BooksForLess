@@ -32,6 +32,9 @@ export default function AppTabs() {
           <TabTrigger name="sell" href="/sell" asChild>
             <TabButton>Sell</TabButton>
           </TabTrigger>
+          <TabTrigger name="scan" href="/scan" asChild>
+            <TabButton>Scan</TabButton>
+          </TabTrigger>
         </CustomTabList>
       </TabList>
     </Tabs>
