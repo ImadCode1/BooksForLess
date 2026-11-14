@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, useColorScheme } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { SafeAreaView } from "react-native-screens/experimental";
 
 import { PrimaryButton } from "@/components/buttons";
 import {
@@ -32,7 +32,7 @@ export default function ProfileScreen() {
     <ThemedView style={styles.screen}>
       <SafeAreaView
         style={styles.screen}
-        edges={["left", "right", "bottom"]}>
+        edges={{ top: process.env.EXPO_OS === "android", left: true, right: true }}>
         <KeyboardAvoidingView
           style={styles.screen}
           behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -40,6 +40,7 @@ export default function ProfileScreen() {
             contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled">
+            <Text accessibilityRole="header" style={ui.heading}>Profile</Text>
             <OrdersSection />
             <PaymentMethodsSection />
           </ScrollView>

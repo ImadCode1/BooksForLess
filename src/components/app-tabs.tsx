@@ -22,6 +22,10 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>My Books</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="books.vertical" md="book_2" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.crop.circle" md="account_circle" />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

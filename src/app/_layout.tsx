@@ -23,10 +23,6 @@ export default function RootLayout() {
             }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
-                name="profile"
-                options={{ title: "Profile", headerBackTitle: "Back" }}
-              />
-              <Stack.Screen
                 name="book/[isbn]"
                 options={{ title: "Book details", headerBackTitle: "Back" }}
               />

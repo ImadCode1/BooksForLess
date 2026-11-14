@@ -99,7 +99,7 @@ export default function MyBooksScreen() {
           <ActionButton title="Scan a book" onPress={() => router.navigate('/scan')} />
         </View>}
         renderItem={({ item }) => item.kind === 'sale'
-          ? <TicketCard ticket={item.ticket} action={<BookCompletion id={item.ticket.id} kind="sale" title={item.ticket.book.title} />} />
+          ? <TicketCard ticket={item.ticket} showPhoto={false} action={<BookCompletion id={item.ticket.id} kind="sale" title={item.ticket.book.title} />} />
           : <View style={ui.card}>
               <Text selectable style={ui.title}>{item.order.title}</Text>
               <Text selectable style={ui.body}>{item.order.condition} · {formatPrice(item.order.price)}</Text>

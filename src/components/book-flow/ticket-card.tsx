@@ -7,14 +7,14 @@ import type { LocalTicket } from '@/types/local-ticket';
 import { formatCad, ticketQrValue } from '@/utils/tickets';
 import { palette, ui } from './ui';
 
-export function TicketCard({ ticket, action }: { ticket: LocalTicket; action?: ReactNode }) {
+export function TicketCard({ ticket, action, showPhoto = true }: { ticket: LocalTicket; action?: ReactNode; showPhoto?: boolean }) {
   useColorScheme();
   const { width } = useWindowDimensions();
   const qrSize = Math.max(120, Math.min(200, width - 136));
   return (
     <View style={[ui.card, { padding: 0, overflow: 'hidden' }]}>
       <View style={{ height: 5, backgroundColor: palette.blue }} />
-      {ticket.photoUri ? <Image
+      {showPhoto && ticket.photoUri ? <Image
         source={{ uri: ticket.photoUri }}
         accessibilityLabel={`Your photo of ${ticket.book.title}`}
         contentFit="contain"

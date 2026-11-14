@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-screens/experimental";
 import { palette, ui } from "@/components/book-flow/ui";
 import { useListingBooks } from "../data";
+import TopBar from "../TopBar";
 import FeaturedCatalog from "./components/FeaturedCatalog";
 import HeroSearch from "./components/HeroSearch";
 import RecentPosts from "./components/RecentPosts";
@@ -32,6 +33,7 @@ export default function LandingPage() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <TopBar />
         <HeroSearch value={searchQuery} onChangeText={setSearchQuery} />
         <Subjects selected={selectedSubject} onSelect={setSelectedSubject} />
         {(searchQuery || selectedSubject !== "All") ?
