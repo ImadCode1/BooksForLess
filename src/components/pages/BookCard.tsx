@@ -1,18 +1,18 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
 import { Pressable, StyleProp, Text, View, ViewStyle, useColorScheme } from "react-native";
 
 import { palette } from "@/components/book-flow/ui";
 import { CoverPlaceholder } from "@/components/book-flow/cover-placeholder";
+import { useBookCover } from "@/services/covers";
 import type { Book } from "./types";
 
 export default function BookCard({ book, style }: {
   book: Book; index?: number; style?: StyleProp<ViewStyle>;
 }) {
   useColorScheme();
-  const [imageState, setImageState] = useState<"loading" | "loaded" | "failed">("loading");
   const isbn = book.isbn.replace(/[-\s]/g, "");
+  const cover = useBookCover({ isbn });
   const priceLabel = book.price === null ? "Sold out" : `$${book.price.toFixed(2)} CAD`;
   return (
     <Pressable
@@ -26,17 +26,17 @@ export default function BookCard({ book, style }: {
         borderRadius: 10, backgroundColor: palette.soft, overflow: "hidden",
         marginBottom: 6, padding: 10,
       }}>
-        {imageState !== "loaded" ? <View
+        {!cover.loaded ? <View
           style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: "center", justifyContent: "center" }}>
-          <CoverPlaceholder loading={imageState === "loading"} />
+          <CoverPlaceholder loading={cover.loading} />
         </View> : null}
-        {imageState !== "failed" ? <Image
-          source={{ uri: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false` }}
+        {cover.uri ? <Image
+          source={{ uri: cover.uri }}
           style={{ width: "100%", height: 132 }}
           accessibilityLabel={`Cover of ${book.title}`}
           contentFit="contain"
-          onLoad={() => setImageState("loaded")}
-          onError={() => setImageState("failed")}
+          onLoad={cover.onLoad}
+          onError={cover.onError}
         /> : null}
       </View>
       <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: "600", color: palette.ink }}>{book.title}</Text>

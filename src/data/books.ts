@@ -30,6 +30,16 @@ export type Book = {
   coverUrl?: string;
 };
 
+/**
+ * Cover image for a book. Uses the book's own URL when it has one, otherwise
+ * the free Open Library cover service. `default=false` makes a missing cover
+ * return 404, so the image's onError fallback shows the placeholder instead
+ * of a blank picture.
+ */
+export function getCoverUrl(book: Pick<Book, "isbn" | "coverUrl">, size: "M" | "L" = "M"): string {
+  return book.coverUrl ?? `https://covers.openlibrary.org/b/isbn/${book.isbn}-${size}.jpg?default=false`;
+}
+
 // Placeholder data until the app is connected to a backend.
 // This is the single book list for the whole app (Home, book page, checkout).
 export const BOOKS: Book[] = [
@@ -182,7 +192,7 @@ export const BOOKS: Book[] = [
     offers: [{ condition: "Good", price: 52, quantity: 1 }],
   },
   {
-    isbn: "9780203062916",
+    isbn: "9780135957059",
     title: "The Pragmatic Programmer",
     author: "David Thomas",
     subject: "Software Engineering",
@@ -194,6 +204,48 @@ export const BOOKS: Book[] = [
       { condition: "Like new", price: 38, quantity: 2 },
       { condition: "Good", price: 29, quantity: 1 },
     ],
+  },
+  // Translated editions. They are listed in the catalog
+  // (components/pages/data.ts), so they must exist here too or their book page
+  // shows "Book not found".
+  {
+    isbn: "9782100545261",
+    title: "Introduction à l'algorithmique",
+    author: "Thomas H. Cormen",
+    subject: "Computer Science",
+    originalPrice: 79,
+    publishedYear: 2010,
+    pages: 1216,
+    description: "French edition of the standard reference on algorithms and data structures.",
+    offers: [
+      { condition: "Like new", price: 56, quantity: 1 },
+      { condition: "Good", price: 42, quantity: 2 },
+    ],
+  },
+  {
+    isbn: "9783486748611",
+    title: "Algorithmen – Eine Einführung",
+    author: "Thomas H. Cormen",
+    subject: "Computer Science",
+    originalPrice: 74.5,
+    publishedYear: 2013,
+    pages: 1320,
+    description: "German edition of the standard reference on algorithms and data structures.",
+    offers: [
+      { condition: "Good", price: 39, quantity: 1 },
+      { condition: "Acceptable", price: 26, quantity: 1 },
+    ],
+  },
+  {
+    isbn: "9788535236996",
+    title: "Algoritmos: Teoria e Prática",
+    author: "Thomas H. Cormen",
+    subject: "Computer Science",
+    originalPrice: 68,
+    publishedYear: 2012,
+    pages: 944,
+    description: "Portuguese edition of the standard reference on algorithms and data structures.",
+    offers: [{ condition: "Like new", price: 48, quantity: 1 }],
   },
 ];
 

@@ -7,6 +7,7 @@ import {
   ScrollView,
   type ScrollViewInstance,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -108,7 +109,7 @@ export default function CheckoutScreen() {
   if (!book || !offer) {
     return (
       <ThemedView style={styles.centered}>
-        <Stack.Screen options={{ title: "Demo checkout" }} />
+        <Stack.Screen options={{ title: "Checkout" }} />
         <ThemedText type="subtitle">Nothing to pay for</ThemedText>
         <ThemedText themeColor="textSecondary">
           This book or quality could not be found.
@@ -121,24 +122,21 @@ export default function CheckoutScreen() {
   if (receipt) {
     return (
       <ThemedView style={[styles.centered, { paddingBottom: insets.bottom }]}>
-        <Stack.Screen options={{ title: "Demo complete", headerBackVisible: false }} />
+        <Stack.Screen options={{ title: "Order confirmed", headerBackVisible: false }} />
         <View style={[styles.successIcon, { backgroundColor: theme.success }]}>
           <ThemedText style={[styles.successCheck, { color: theme.background }]}>
             ✓
           </ThemedText>
         </View>
         <ThemedText type="subtitle" style={styles.textCenter}>
-          Demo checkout complete
+          Order confirmed
         </ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.textCenter}>
-          Simulated purchase of {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
-          with {receipt.method}. No money was charged and no real order was placed.
+          You bought {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
+          with {receipt.method}.
         </ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.textCenter}>
-          Demo delivery address: {receipt.address.fullName}, {formatAddressLine(receipt.address)}. Nothing will be shipped.
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.textCenter}>
-          This simulated order is saved for this session.
+          Delivery address: {receipt.address.fullName}, {formatAddressLine(receipt.address)}.
         </ThemedText>
         <PrimaryButton label="Back to book" onPress={() => router.back()} />
       </ThemedView>
@@ -248,16 +246,35 @@ export default function CheckoutScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
       <ThemedView style={styles.flex}>
-        <Stack.Screen options={{ title: step === "payment" ? "Demo payment" : "Demo delivery" }} />
+        <Stack.Screen options={{ title: step === "payment" ? "Payment" : "Delivery" }} />
         <ScrollView
           ref={scrollRef}
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled">
-          <ThemedText type="small" themeColor="textSecondary">
-            Step {step === "payment" ? 1 : 2} of 2 ·{" "}
-            {step === "payment" ? "Payment method" : "Delivery address"}
-          </ThemedText>
+          {/* Same step indicator as the onboarding: pill-shaped blue dot for the
+              current step, small grey dots for the others. */}
+          <View
+            style={styles.stepRow}
+            accessible
+            accessibilityLabel={`Step ${step === "payment" ? 1 : 2} of 2: ${
+              step === "payment" ? "Payment method" : "Delivery address"
+            }`}>
+            <View style={styles.dots}>
+              {(["payment", "address"] as const).map((name) => (
+                <View
+                  key={name}
+                  style={[styles.dot, name === step && styles.selectedDot]}
+                />
+              ))}
+            </View>
+            <Text style={ui.caption}>
+              Step {step === "payment" ? 1 : 2} of 2 ·{" "}
+              <Text style={styles.stepName}>
+                {step === "payment" ? "Payment method" : "Delivery address"}
+              </Text>
+            </Text>
+          </View>
           <ThemedView type="backgroundElement" style={styles.summary}>
             <View style={styles.flex}>
               <ThemedText type="smallBold">{book.title}</ThemedText>
@@ -322,9 +339,6 @@ export default function CheckoutScreen() {
                 <ThemedText type="subtitle" style={styles.sectionTitle}>
                   Add a card
                 </ThemedText>
-                <ThemedText themeColor="textSecondary">
-                  Use a test card to try the checkout. Nothing is charged or sent to a payment provider.
-                </ThemedText>
                 <CardForm
                   value={cardForm}
                   onChange={setCardForm}
@@ -381,9 +395,6 @@ export default function CheckoutScreen() {
                   <ThemedText type="subtitle" style={styles.sectionTitle}>
                     Add a delivery address
                   </ThemedText>
-                  <ThemedText themeColor="textSecondary">
-                    Enter a sample address to try the delivery step. Nothing will be shipped.
-                  </ThemedText>
                   <AddressForm
                     value={addressForm}
                     onChange={setAddressForm}
@@ -409,10 +420,10 @@ export default function CheckoutScreen() {
             <PrimaryButton label="Continue" onPress={handleContinue} />
           ) : (
             <PrimaryButton
-              label={`Simulate payment ${formatPrice(offer.price)}`}
+              label={`Pay ${formatPrice(offer.price)}`}
               onPress={handlePay}
               loading={processing}
-              loadingLabel="Processing demo"
+              loadingLabel="Processing payment"
             />
           )}
         </ThemedView>
@@ -450,6 +461,15 @@ const styles = StyleSheet.create({
   content: {
     ...ui.content,
   },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
+  },
+  dots: { flexDirection: "row", gap: 7, alignItems: "center" },
+  dot: { height: 6, width: 6, borderRadius: 3, backgroundColor: "#BCCBE7" },
+  selectedDot: { width: 26, backgroundColor: palette.blue },
+  stepName: { color: palette.accentText, fontWeight: "700" },
   summary: {
     ...ui.card,
     flexDirection: "row",

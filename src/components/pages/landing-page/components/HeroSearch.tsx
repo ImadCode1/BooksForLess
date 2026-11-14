@@ -17,7 +17,7 @@ export default function HeroSearch({ value, onChangeText }: {
           <Path d="m15 15 5 5" stroke={scheme === "dark" ? "#B0B4BA" : "#566782"} strokeWidth={1.8} strokeLinecap="round" />
         </Svg>
       <TextInput
-        accessibilityLabel="Search demo books by title or author"
+        accessibilityLabel="Search books by title or author"
         style={{ flex: 1, minWidth: 0, minHeight: 54, paddingVertical: 14, color: palette.ink, fontSize: 16 }}
         placeholder="Search books or authors"
         placeholderTextColor={palette.muted}

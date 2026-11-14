@@ -23,16 +23,12 @@ export default function RootLayout() {
             }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
-                name="profile"
-                options={{ title: "Profile", headerBackTitle: "Back" }}
-              />
-              <Stack.Screen
                 name="book/[isbn]"
                 options={{ title: "Book details", headerBackTitle: "Back" }}
               />
               <Stack.Screen
                 name="checkout"
-                options={{ title: "Demo checkout", headerBackTitle: "Back" }}
+                options={{ title: "Checkout", headerBackTitle: "Back" }}
               />
               <Stack.Screen
                 name="pages/catalog-page/catalog-page"

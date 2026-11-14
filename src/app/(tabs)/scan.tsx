@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
-import { DEMO_ISBN } from '@/data/demo-books';
 import { BookPreparation } from '@/components/book-flow/book-preparation';
 import { BookPreview } from '@/components/book-flow/book-preview';
 import { useOnboarding } from '@/components/book-flow/onboarding';
@@ -221,8 +220,6 @@ export default function ScanScreen() {
                 onSubmitEditing={() => { void identify(isbn); }}
               />
               <Button title="Look up ISBN" onPress={() => { void identify(isbn); }} />
-              <Button title="Try a demo book" secondary onPress={() => { void identify(DEMO_ISBN); }} />
-              <Text selectable style={ui.caption}>No book nearby? Demo ISBN: {DEMO_ISBN}. Works offline.</Text>
               {cameraPaused ? <Button title="Resume camera scanning" secondary onPress={() => {
                 locked.current = false;
                 setCameraPaused(false);
@@ -256,11 +253,6 @@ export default function ScanScreen() {
             <View style={styles.section}>
               <Text style={styles.label}>Is this your book?</Text>
               <BookPreview key={book.isbn} book={book} />
-              <Text style={styles.body}>
-                {book.source === 'demo' ? 'Offline demo metadata'
-                  : book.source === 'manual' ? 'Manually entered metadata'
-                  : 'Metadata from Open Library'}
-              </Text>
               <Button title="Confirm book & continue" onPress={continueToSelling} />
             </View>
           ) : null}

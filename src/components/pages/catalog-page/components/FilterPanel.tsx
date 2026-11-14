@@ -4,12 +4,10 @@ import {
     Easing,
     ScrollView,
     StyleSheet,
-    Text,
-    TouchableOpacity,
     useWindowDimensions,
     View,
 } from "react-native";
-import { ACCENT, TEXT } from "../../theme";
+import { ActionButton, palette } from "@/components/book-flow/ui";
 import { Filters } from "../../types";
 import CountryFilter from "./CountryFilter";
 import DateFilter from "./DateFilter";
@@ -95,66 +93,52 @@ export default function FilterPanel({
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity onPress={onReset} hitSlop={8}>
-            <Text style={styles.reset}>Reset</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.applyButton}
-            onPress={onClose}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.applyText}>
-              Show {resultCount} {resultCount === 1 ? "book" : "books"}
-            </Text>
-          </TouchableOpacity>
+          {/* Reset only takes the width of its label; "Show N books" gets the
+              rest so it stays on one line and matches Reset's height. */}
+          <ActionButton title="Reset" secondary compact onPress={onReset} />
+          <View style={styles.footerButton}>
+            <ActionButton
+              title={`Show ${resultCount} ${resultCount === 1 ? "book" : "books"}`}
+              onPress={onClose}
+            />
+          </View>
         </View>
       </View>
     </Animated.View>
   );
 }
 
+// Styled like the app's cards (ui.card): paper background, 20px corners,
+// no hardcoded white so it also works in dark mode.
 const styles = StyleSheet.create({
   container: {
     overflow: "hidden",
-    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    borderRadius: 20,
+    borderCurve: "continuous",
+    backgroundColor: palette.paper,
   },
   inner: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f5",
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 4,
   },
   footer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f5",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
   },
-  reset: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: TEXT,
-  },
-  applyButton: {
-    backgroundColor: ACCENT,
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-    borderRadius: 22,
-  },
-  applyText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
+  footerButton: {
+    flex: 1,
   },
 });

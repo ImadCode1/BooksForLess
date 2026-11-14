@@ -17,7 +17,7 @@ const slides = [
   {
     title: 'Give your textbooks a second life.',
     body: 'Start with the barcode on the back. We’ll find the title and author, so you don’t have to type them.',
-    detail: 'No barcode? Enter the ISBN or try a demo book.',
+    detail: 'No barcode? Enter the ISBN instead.',
   },
   {
     title: 'Show the book as it is.',
@@ -26,8 +26,8 @@ const slides = [
   },
   {
     title: 'Keep your ticket handy.',
-    body: 'Save your book and get a QR ticket in My Books. Campus co-op drop-off is the proposed next step, not a booked service.',
-    detail: 'No signup. Submitted book details are shared public demo data.',
+    body: 'Save your book and get a QR ticket in My Books. Bring it to the campus co-op drop-off.',
+    detail: 'No signup needed.',
   },
 ];
 

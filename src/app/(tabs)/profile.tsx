@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -40,7 +40,11 @@ import {
 export default function ProfileScreen() {
   return (
     <ThemedView style={styles.screen}>
-      <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
+      {/* No stack header inside the tabs, so Android needs the top inset;
+          on iOS the scroll view's automatic inset handles it. */}
+      <SafeAreaView
+        style={styles.screen}
+        edges={Platform.OS === "android" ? ["top", "left", "right"] : ["left", "right"]}>
         <KeyboardAvoidingView
           style={styles.screen}
           behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -48,6 +52,7 @@ export default function ProfileScreen() {
             contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled">
+            <Text accessibilityRole="header" style={ui.heading}>Profile</Text>
             {/* TODO: show the signed-in user once accounts exist. */}
             <ThemedView type="backgroundElement" style={styles.userCard}>
               <View style={styles.avatar}>
@@ -55,14 +60,8 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.flex}>
                 <ThemedText type="smallBold">Guest</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Accounts are coming soon.
-                </ThemedText>
               </View>
             </ThemedView>
-            <ThemedText type="small" themeColor="textSecondary">
-              Demo profile. Use sample card and address details; saved only for this session.
-            </ThemedText>
 
             <OrdersSection />
             <PaymentMethodsSection />

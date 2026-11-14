@@ -45,7 +45,6 @@ export default function MyBooksScreen() {
             <Text accessibilityRole="header" style={[ui.heading, { flex: 1 }]}>My Books</Text>
             {__DEV__ ? <DevMenu busy={resetting} onPreview={replay} onReset={() => { void resetOnboarding(); }} /> : null}
           </View>
-          <Text style={ui.body}>Shared demo collection. No accounts or private ownership yet. Book details are saved online; photos are only available in the session that took them.</Text>
           {error ? <><Notice>{error}</Notice><ActionButton title="Retry loading books" secondary onPress={() => { void refresh(); }} /></> : null}
           {__DEV__ && devMessage ? <Notice>{devMessage}</Notice> : null}
         </View>}

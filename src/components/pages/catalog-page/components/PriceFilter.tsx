@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
+import { palette } from "@/components/book-flow/ui";
 import { MUTED, TEXT } from "../../theme";
 import FilterSection from "./FilterSection";
 
@@ -57,21 +58,20 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f6f6f8",
-    borderWidth: 1,
-    borderColor: "#ececf0",
+    backgroundColor: palette.soft,
     borderRadius: 12,
     paddingHorizontal: 12,
   },
   currency: {
-    fontSize: 14,
+    fontSize: 16,
     color: MUTED,
     marginRight: 4,
   },
   input: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 10,
-    fontSize: 14,
+    fontSize: 16,
     color: TEXT,
   },
   to: {

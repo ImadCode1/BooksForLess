@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { palette } from "@/components/book-flow/ui";
 import { ACCENT, MUTED, TEXT } from "../../theme";
 import { FilterIcon, SearchIcon } from "./icons";
 
@@ -27,7 +28,7 @@ export default function SearchBar({
 }: SearchBarProps) {
   return (
     <View style={styles.row}>
-      <SearchIcon />
+      <SearchIcon color={MUTED} />
       <TextInput
         style={styles.input}
         placeholder={placeholder}
@@ -35,6 +36,9 @@ export default function SearchBar({
         value={value}
         onChangeText={onChangeText}
         clearButtonMode="while-editing"
+        returnKeyType="search"
+        autoCorrect={false}
+        accessibilityLabel="Search books by title or author"
       />
       {onPressFilter && (
         <TouchableOpacity
@@ -56,28 +60,23 @@ export default function SearchBar({
 }
 
 const styles = StyleSheet.create({
+  // Same soft, borderless field as the Home page search (HeroSearch).
   row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#ececf2",
-    marginHorizontal: 16,
-    paddingLeft: 14,
-    paddingRight: 6,
-    paddingVertical: 4,
-    shadowColor: "#7a8cc4",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    gap: 10,
+    backgroundColor: palette.soft,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    paddingLeft: 16,
+    paddingRight: 8,
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
-    marginLeft: 10,
-    fontSize: 15,
+    minWidth: 0,
+    minHeight: 54,
+    paddingVertical: 14,
+    fontSize: 16,
     color: TEXT,
   },
   filterButton: {
@@ -88,7 +87,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   filterButtonOpen: {
-    backgroundColor: "#fff1ef",
+    backgroundColor: palette.paper,
   },
   badge: {
     position: "absolute",

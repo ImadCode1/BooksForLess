@@ -18,10 +18,12 @@ export default function FilterSection({ title, children }: FilterSectionProps) {
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
+  // Matches ui.label used by the sell-flow forms.
   title: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: "600",
     color: TEXT,
     marginBottom: 10,

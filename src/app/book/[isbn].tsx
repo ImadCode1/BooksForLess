@@ -14,6 +14,7 @@ import {
   getBookByIsbn,
 } from "@/data/books";
 import { useTheme } from "@/hooks/use-theme";
+import { useBookCover } from "@/services/covers";
 import { useOffers } from "@/services/inventory";
 import { ActionButton, palette, ui } from "@/components/book-flow/ui";
 import { CoverPlaceholder } from "@/components/book-flow/cover-placeholder";
@@ -27,7 +28,11 @@ export default function BookDetailsScreen() {
   // Shared stock, so a purchase on the payment page shows up here.
   const offers = useOffers(book?.isbn);
   const [chosen, setChosen] = useState<BookCondition>();
-  const [coverFailed, setCoverFailed] = useState(false);
+  // Called before the "not found" return so the hook order never changes.
+  const cover = useBookCover(
+    { isbn: book?.isbn ?? "", coverUrl: book?.coverUrl },
+    "L",
+  );
 
   if (!book) {
     return (
@@ -58,6 +63,13 @@ export default function BookDetailsScreen() {
   const savings = selectedOffer
     ? Math.round((1 - selectedOffer.price / book.originalPrice) * 100)
     : 0;
+  const inStockOffers = offers.filter((offer) => offer.quantity > 0);
+  const lowestPrice = inStockOffers.length
+    ? Math.min(...inStockOffers.map((offer) => offer.price))
+    : undefined;
+  const conditionSummary = inStockOffers.length
+    ? inStockOffers.map((offer) => offer.condition).join(", ")
+    : "None in stock";
 
   function handleBuy() {
     if (!book || !selectedOffer) return;
@@ -69,7 +81,7 @@ export default function BookDetailsScreen() {
 
   const canBuy = !!selectedOffer && selectedOffer.quantity > 0;
   const buyLabel = canBuy
-    ? `Continue to demo checkout`
+    ? `Buy · ${formatPrice(selectedOffer.price)}`
     : "Not available";
 
   return (
@@ -87,16 +99,22 @@ export default function BookDetailsScreen() {
         <View style={styles.hero}>
           <View style={[styles.coverShadow, { shadowColor: theme.text }]}>
             <ThemedView type="backgroundElement" style={styles.cover}>
-              {book.coverUrl && !coverFailed ? (
+              {/* Placeholder stays underneath until the cover has loaded. */}
+              {!cover.loaded && (
+                <View style={StyleSheet.absoluteFill}>
+                  <CoverPlaceholder loading={cover.loading} />
+                </View>
+              )}
+              {cover.uri && (
                 <Image
-                  source={book.coverUrl}
+                  source={{ uri: cover.uri }}
                   style={StyleSheet.absoluteFill}
-                  contentFit="contain"
-                  onError={() => setCoverFailed(true)}
+                  contentFit="cover"
+                  transition={200}
+                  onLoad={cover.onLoad}
+                  onError={cover.onError}
                   accessibilityLabel={`Cover of ${book.title}`}
                 />
-              ) : (
-                <CoverPlaceholder />
               )}
             </ThemedView>
           </View>
@@ -170,11 +188,33 @@ export default function BookDetailsScreen() {
             Details
           </ThemedText>
           <ThemedView type="backgroundElement" style={styles.card}>
-            <DetailRow label="ISBN" value={book.isbn} />
+            <DetailRow label="Author" value={book.author} />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow label="Subject" value={book.subject} />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <DetailRow label="Published" value={String(book.publishedYear)} />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <DetailRow label="Pages" value={String(book.pages)} />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow label="ISBN-13" value={book.isbn} />
+          </ThemedView>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionLabel}>
+            Pricing
+          </ThemedText>
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <DetailRow label="New price" value={formatPrice(book.originalPrice)} />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow
+              label="Used from"
+              value={lowestPrice === undefined ? "—" : formatPrice(lowestPrice)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow label="Copies available" value={formatCopies(total)} />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <DetailRow label="Conditions in stock" value={conditionSummary} />
           </ThemedView>
         </View>
 
@@ -293,7 +333,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cover: {
-    width: 120,
+    width: 136,
     aspectRatio: 2 / 3,
     borderRadius: Spacing.two,
     alignItems: "center",

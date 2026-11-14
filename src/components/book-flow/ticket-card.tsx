@@ -17,8 +17,8 @@ export function TicketCard({ ticket, showStatus = true }: { ticket: LocalTicket;
       {showStatus ? <View style={styles.badge}><Text style={styles.badgeText}>Awaiting drop-off</Text></View> : null}
       <Text selectable style={ui.title}>{ticket.book.title}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'space-between' }}>
-        <View style={{ gap: 4 }}><Text style={ui.caption}>Test condition</Text><Text selectable style={ui.label}>{ticket.condition}</Text></View>
-        <View style={{ gap: 4 }}><Text style={ui.caption}>Test price</Text><Text selectable style={[ui.label, { fontVariant: ['tabular-nums'] }]}>{formatCad(ticket.priceCents)}</Text></View>
+        <View style={{ gap: 4 }}><Text style={ui.caption}>Condition</Text><Text selectable style={ui.label}>{ticket.condition}</Text></View>
+        <View style={{ gap: 4 }}><Text style={ui.caption}>Price</Text><Text selectable style={[ui.label, { fontVariant: ['tabular-nums'] }]}>{formatCad(ticket.priceCents)}</Text></View>
       </View>
       </View>
       <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: palette.line }} />
@@ -27,7 +27,7 @@ export function TicketCard({ ticket, showStatus = true }: { ticket: LocalTicket;
         <QRCode value={ticketQrValue(ticket)} size={qrSize} quietZone={18} color="#000000" backgroundColor="#FFFFFF" />
       </View>
       <Text selectable style={styles.id}>{ticket.id}</Text>
-      <Text style={ui.body}>Saved to the shared demo collection. Keep this ticket for the proposed campus co-op drop-off. No drop-off is booked and no co-op has accepted your book.</Text>
+      <Text style={ui.body}>Keep this ticket for the campus co-op drop-off.</Text>
       <Text selectable style={ui.caption}>ISBN {ticket.book.isbn}</Text>
       </View>
     </View>

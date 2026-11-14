@@ -37,7 +37,7 @@ export default function LandingPage() {
         <HeroSearch value={searchQuery} onChangeText={setSearchQuery} />
         <Subjects selected={selectedSubject} onSelect={setSelectedSubject} />
         {(searchQuery || selectedSubject !== "All") ?
-          <Text accessibilityLiveRegion="polite" style={ui.caption}>{filteredBooks.length} matching demo books</Text>
+          <Text accessibilityLiveRegion="polite" style={ui.caption}>{filteredBooks.length} matching books</Text>
         : null}
         <RecentPosts books={filteredBooks} />
         <FeaturedCatalog books={filteredBooks} />

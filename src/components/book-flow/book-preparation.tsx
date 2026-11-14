@@ -1,11 +1,13 @@
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View, useColorScheme } from 'react-native';
 
+import { getNewPrice, type NewPrice } from '@/services/pricing';
 import type { BookMetadata } from '@/types/book-metadata';
 import type { BookCondition, LocalTicket } from '@/types/local-ticket';
-import { CONDITIONS, createLocalTicket, formatCad, parseCadPrice } from '@/utils/tickets';
+import { calculateSellingPrice, CONDITION_MULTIPLIERS as CONDITION_SHARE } from '@/utils/pricing';
+import { CONDITIONS, createLocalTicket, formatCad } from '@/utils/tickets';
 
 import { BookPhoto } from './book-photo';
 import { TicketCard } from './ticket-card';
@@ -16,7 +18,7 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
   useColorScheme();
   const [step, setStep] = useState<'details' | 'photo' | 'review' | 'ticket'>('details');
   const [condition, setCondition] = useState<BookCondition | null>(null);
-  const [price, setPrice] = useState('');
+  const [newPrice, setNewPrice] = useState<NewPrice | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [ticket, setTicket] = useState<LocalTicket | null>(null);
   const [error, setError] = useState('');
@@ -24,13 +26,23 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
   const pendingTicket = useRef<LocalTicket | null>(null);
   const [saving, setSaving] = useState(false);
   const { addTicket } = useTickets();
-  const cents = parseCadPrice(price);
+  // The price is calculated, never typed: new price × condition multiplier.
+  const cents = condition && newPrice ? calculateSellingPrice(newPrice.cents, condition) : null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void getNewPrice(book.isbn, controller.signal).then((result) => {
+      if (!controller.signal.aborted) setNewPrice(result);
+    });
+    return () => controller.abort();
+  }, [book.isbn]);
 
   function reviewDetails() {
-    if (!condition || cents === null) {
-      setError('Choose a condition and enter a price from $0.01 to $9,999.99 CAD (up to two decimal places).');
+    if (!condition) {
+      setError('Choose a condition to see your price.');
       return;
     }
+    if (cents === null) return; // Still calculating; the button is disabled.
     setError('');
     setStep('photo');
   }
@@ -67,9 +79,8 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
       {error ? <Notice>{error}</Notice> : null}
       {step === 'details' ? (
         <>
-          <Notice>Testing controls: manually set the condition and price while the planned AI evaluation is not connected.</Notice>
           <Text style={ui.label}>{book.title}</Text>
-          <View accessibilityRole="radiogroup" accessibilityLabel="Test book condition" style={[ui.card, { padding: 0, gap: 0, overflow: 'hidden' }]}>
+          <View accessibilityRole="radiogroup" accessibilityLabel="Book condition" style={[ui.card, { padding: 0, gap: 0, overflow: 'hidden' }]}>
             {CONDITIONS.map(({ value, description }, index) => (
               <Pressable
                 key={value}
@@ -91,25 +102,34 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
               </Pressable>
             ))}
           </View>
-          <Text style={ui.label}>Test price (CAD)</Text>
-          <TextInput
-            accessibilityLabel="Asking price in Canadian dollars"
-            style={[ui.input, { fontSize: 28, fontWeight: '600', fontVariant: ['tabular-nums'] }]}
-            keyboardType="decimal-pad"
-            placeholder="0.00"
-            placeholderTextColor={palette.muted}
-            value={price}
-            maxLength={12}
-            onChangeText={setPrice}
-          />
-          <Text style={ui.body}>CAD · Manual test value, not a market valuation or an AI result.</Text>
-          <ActionButton title="Continue to photo" onPress={reviewDetails} />
+          <View style={ui.card} accessible accessibilityLiveRegion="polite"
+            accessibilityLabel={cents !== null ? `Your price: ${formatCad(cents)}` : newPrice ? 'Choose a condition to see your price' : 'Calculating your price'}>
+            <Text style={ui.caption}>Your price</Text>
+            {!newPrice ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <ActivityIndicator color={palette.blue} />
+                <Text style={ui.body}>Calculating…</Text>
+              </View>
+            ) : cents !== null ? (
+              <>
+                <Text style={{ fontSize: 34, lineHeight: 40, fontWeight: '700', color: palette.ink, fontVariant: ['tabular-nums'] }}>
+                  {formatCad(cents)}
+                </Text>
+                <Text style={ui.body}>
+                  {Math.round(CONDITION_SHARE[condition!] * 100)}% of the new price ({formatCad(newPrice.cents)}), for a {condition!.toLowerCase()} copy.
+                </Text>
+              </>
+            ) : (
+              <Text style={ui.body}>Choose a condition to see your price.</Text>
+            )}
+          </View>
+          <ActionButton title="Continue to photo" disabled={!condition || cents === null} onPress={reviewDetails} />
           <ActionButton title="Back to book" secondary onPress={onCancel} />
         </>
       ) : null}
       {step === 'photo' ? (
         <>
-          <Text style={ui.body}>Show the cover and any visible wear. Your photo stays local; no AI inspection takes place.</Text>
+          <Text style={ui.body}>Show the cover and any visible wear.</Text>
           <BookPhoto uri={photoUri} onPhoto={setPhotoUri} />
           <ActionButton title="Review book" disabled={!photoUri} onPress={() => setStep('review')} />
           <ActionButton title="Back to details" secondary onPress={() => setStep('details')} />
@@ -122,10 +142,7 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
             <Text style={ui.title}>{book.title}</Text>
             <Text style={ui.body}>{book.authors.join(', ') || 'Author not provided'}</Text>
             <Text style={ui.label}>{condition} · {cents !== null ? formatCad(cents) : ''}</Text>
-            <Text style={ui.body}>Your selected condition and asking price. No payment is collected.</Text>
           </View>
-          <Notice>No account is required. Book details, test condition, price, and ticket ID will be saved to a shared public demo collection. Do not include personal information. Your photo is not uploaded.</Notice>
-          <Text style={ui.body}>The QR ticket represents a proposed co-op drop-off, not a confirmed booking.</Text>
           <ActionButton title={saving ? 'Saving book…' : 'Save book & generate QR'} disabled={saving} onPress={() => { void generate(); }} />
           <ActionButton title="Back to photo" secondary disabled={saving} onPress={() => setStep('photo')} />
         </>

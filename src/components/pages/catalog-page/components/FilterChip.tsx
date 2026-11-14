@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
-import { ACCENT, TEXT } from "../../theme";
+import { palette } from "@/components/book-flow/ui";
+import { TEXT } from "../../theme";
 
 interface FilterChipProps {
   label: string;
@@ -17,6 +18,8 @@ export default function FilterChip({
       style={[styles.chip, selected && styles.chipSelected]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
     >
       <Text style={[styles.text, selected && styles.textSelected]}>
         {label}
@@ -26,25 +29,26 @@ export default function FilterChip({
 }
 
 const styles = StyleSheet.create({
+  // Soft grey chip; the selected one fills with the app's blue, like the
+  // onboarding dots and primary buttons.
   chip: {
-    paddingHorizontal: 14,
+    minHeight: 40,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f6f6f8",
-    borderWidth: 1,
-    borderColor: "#ececf0",
+    borderRadius: 999,
+    backgroundColor: palette.soft,
+    justifyContent: "center",
   },
   chipSelected: {
-    backgroundColor: "#fff1ef",
-    borderColor: ACCENT,
+    backgroundColor: palette.blue,
   },
   text: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "500",
     color: TEXT,
   },
   textSelected: {
-    color: ACCENT,
+    color: "#FFFFFF",
     fontWeight: "600",
   },
 });
