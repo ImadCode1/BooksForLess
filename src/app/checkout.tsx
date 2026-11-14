@@ -1,6 +1,7 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -47,14 +48,12 @@ const WALLET_LABELS: Record<Wallet, string> = {
   paypal: "PayPal",
 };
 
-// Offer the wallet that matches the platform, plus PayPal everywhere.
 const WALLETS: Wallet[] = [
   ...(Platform.OS === "ios" ? (["apple-pay"] as const) : []),
   ...(Platform.OS === "android" ? (["google-pay"] as const) : []),
   "paypal",
 ];
 
-// Stand-in for the payment provider's response time.
 const SIMULATED_PROCESSING_MS = 1200;
 
 export default function CheckoutScreen() {
@@ -73,8 +72,7 @@ export default function CheckoutScreen() {
   const [showAllErrors, setShowAllErrors] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>();
-  const [receipt, setReceipt] = useState<{ amount: number; method: string }>();
-
+  const busy = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -91,30 +89,7 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (receipt) {
-    return (
-      <ThemedView style={[styles.centered, { paddingBottom: insets.bottom }]}>
-        <Stack.Screen options={{ title: "Order confirmed", headerBackVisible: false }} />
-        <View style={[styles.successIcon, { backgroundColor: theme.success }]}>
-          <ThemedText style={[styles.successCheck, { color: theme.background }]}>
-            ✓
-          </ThemedText>
-        </View>
-        <ThemedText type="subtitle" style={styles.textCenter}>
-          Order confirmed
-        </ThemedText>
-        <ThemedText themeColor="textSecondary" style={styles.textCenter}>
-          You bought {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
-          with {receipt.method}.
-        </ThemedText>
-        <PrimaryButton label="Back to book" onPress={() => router.back()} />
-      </ThemedView>
-    );
-  }
-
-  // ----- Payment choice -----
   const hasSavedCards = cards.length > 0;
-  // Without saved cards the only option is adding one.
   const payment: PaymentChoice = !hasSavedCards
     ? { kind: "new-card" }
     : (chosenPayment ?? { kind: "saved", cardId: cards[0].id });
@@ -122,48 +97,47 @@ export default function CheckoutScreen() {
     c.kind === payment.kind &&
     (c.kind !== "saved" || (payment.kind === "saved" && c.cardId === payment.cardId)) &&
     (c.kind !== "wallet" || (payment.kind === "wallet" && c.wallet === payment.wallet));
-
-  function paymentLabel(): string {
-    if (payment.kind === "new-card") return describeCard(toSavedCard(cardForm));
-    if (payment.kind === "saved") {
-      const card = cards.find((c) => c.id === payment.cardId);
-      return card ? describeCard(card) : "your card";
-    }
-    return WALLET_LABELS[payment.wallet];
-  }
-
   const inStock = offer.quantity > 0;
 
   function handlePay() {
-    if (!book || !offer || processing) return;
-    setError(undefined);
-
+    if (!book || !offer || offer.quantity < 1 || busy.current) return;
     if (payment.kind === "new-card" && !isCardFormValid(cardForm)) {
       setShowAllErrors(true);
       return;
     }
+    const newCard = payment.kind === "new-card" ? toSavedCard(cardForm) : undefined;
+    const savedCard = payment.kind === "saved" ? cards.find((card) => card.id === payment.cardId) : undefined;
+    const card = newCard ?? savedCard;
+    if (payment.kind !== "wallet" && !card) {
+      setError("Choose a payment method to continue.");
+      return;
+    }
+    const method = payment.kind === "wallet"
+      ? WALLET_LABELS[payment.wallet]
+      : card ? describeCard(card) : "";
+    const rememberCard = cardForm.save;
 
-    // Resolve the payment method, saving a new card if asked to.
-    const method = paymentLabel();
-    if (payment.kind === "new-card" && cardForm.save) saveCard(toSavedCard(cardForm));
-
-    // TODO: charge through a real payment provider instead of simulating it.
+    Keyboard.dismiss();
+    busy.current = true;
     setProcessing(true);
+    setError(undefined);
     const amount = offer.price;
     timer.current = setTimeout(() => {
-      setProcessing(false);
-      if (purchaseCopy(book.isbn, offer.condition)) {
-        addOrder({
-          isbn: book.isbn,
-          title: book.title,
-          condition: offer.condition,
-          price: amount,
-          paymentMethod: method,
-        });
-        setReceipt({ amount, method });
-      } else {
-        setError("Sorry, this copy just sold out. You have not been charged.");
+      if (!purchaseCopy(book.isbn, offer.condition)) {
+        busy.current = false;
+        setProcessing(false);
+        setError("This copy just sold out. No payment was taken and no pickup ticket was created.");
+        return;
       }
+      if (newCard && rememberCard) saveCard(newCard);
+      const order = addOrder({
+        isbn: book.isbn,
+        title: book.title,
+        condition: offer.condition,
+        price: amount,
+        paymentMethod: method,
+      });
+      router.replace({ pathname: "/pickup/[id]", params: { id: order.id } });
     }, SIMULATED_PROCESSING_MS);
   }
 
@@ -187,91 +161,71 @@ export default function CheckoutScreen() {
             </View>
             <ThemedText type="smallBold">{formatPrice(offer.price)}</ThemedText>
           </ThemedView>
+          <ThemedText themeColor="textSecondary">
+            Get a pickup QR ticket after checkout. No delivery address is needed.
+          </ThemedText>
 
           {error && (
             <View style={[styles.notice, { borderColor: theme.danger }]}>
-              <ThemedText type="small" style={{ color: theme.danger }}>
+              <ThemedText type="small" style={{ color: theme.danger }} accessibilityLiveRegion="polite">
                 {error}
               </ThemedText>
             </View>
           )}
 
           {hasSavedCards ? (
-              <>
-                <View style={styles.section} accessibilityRole="radiogroup">
-                  <ThemedText type="smallBold">Pay with a saved card</ThemedText>
-                  {cards.map((card) => (
-                    <OptionRow
-                      key={card.id}
-                      title={describeCard(card)}
-                      subtitle={`${card.holderName} · Expires ${formatCardExpiry(card)}`}
-                      badge={card.id === DEFAULT_CARD.id ? "Default" : undefined}
-                      selected={isPaymentChosen({ kind: "saved", cardId: card.id })}
-                      onSelect={() => setChosenPayment({ kind: "saved", cardId: card.id })}
-                    />
-                  ))}
-                </View>
-
-                <View style={styles.section} accessibilityRole="radiogroup">
-                  <ThemedText type="smallBold">Or pay another way</ThemedText>
+            <>
+              <View style={styles.section} accessibilityRole="radiogroup">
+                <ThemedText type="smallBold">Pay with a saved card</ThemedText>
+                {cards.map((card) => (
                   <OptionRow
-                    title="New card"
-                    subtitle="Credit or debit card"
-                    selected={isPaymentChosen({ kind: "new-card" })}
-                    onSelect={() => setChosenPayment({ kind: "new-card" })}
+                    key={card.id}
+                    title={describeCard(card)}
+                    subtitle={`${card.holderName} · Expires ${formatCardExpiry(card)}`}
+                    badge={card.id === DEFAULT_CARD.id ? "Default" : undefined}
+                    selected={isPaymentChosen({ kind: "saved", cardId: card.id })}
+                    onSelect={() => setChosenPayment({ kind: "saved", cardId: card.id })}
                   />
-                  {payment.kind === "new-card" && (
-                    <CardForm
-                      value={cardForm}
-                      onChange={setCardForm}
-                      showAllErrors={showAllErrors}
-                    />
-                  )}
-                  {WALLETS.map((wallet) => (
-                    <OptionRow
-                      key={wallet}
-                      title={WALLET_LABELS[wallet]}
-                      selected={isPaymentChosen({ kind: "wallet", wallet })}
-                      onSelect={() => setChosenPayment({ kind: "wallet", wallet })}
-                    />
-                  ))}
-                </View>
-              </>
-            ) : (
-              <View style={styles.section}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>
-                  Add a card
-                </ThemedText>
-                <CardForm
-                  value={cardForm}
-                  onChange={setCardForm}
-                  showAllErrors={showAllErrors}
-                />
+                ))}
               </View>
-            )}
-          <ThemedText type="small" themeColor="textSecondary" style={styles.textCenter}>
-            Demo checkout: no real payment is made.
-          </ThemedText>
+
+              <View style={styles.section} accessibilityRole="radiogroup">
+                <ThemedText type="smallBold">Or pay another way</ThemedText>
+                <OptionRow
+                  title="New card"
+                  subtitle="Credit or debit card"
+                  selected={isPaymentChosen({ kind: "new-card" })}
+                  onSelect={() => setChosenPayment({ kind: "new-card" })}
+                />
+                {payment.kind === "new-card" && (
+                  <CardForm value={cardForm} onChange={setCardForm} showAllErrors={showAllErrors} />
+                )}
+                {WALLETS.map((wallet) => (
+                  <OptionRow
+                    key={wallet}
+                    title={WALLET_LABELS[wallet]}
+                    selected={isPaymentChosen({ kind: "wallet", wallet })}
+                    onSelect={() => setChosenPayment({ kind: "wallet", wallet })}
+                  />
+                ))}
+              </View>
+            </>
+          ) : (
+            <View style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>Add a card</ThemedText>
+              <CardForm value={cardForm} onChange={setCardForm} showAllErrors={showAllErrors} />
+            </View>
+          )}
         </ScrollView>
 
-        <ThemedView
-          style={[
-            styles.footer,
-            {
-              borderTopColor: palette.line,
-              paddingBottom: insets.bottom + Spacing.three,
-            },
-          ]}>
-          {!inStock ? (
-            <PrimaryButton label="Sold out" onPress={() => {}} disabled />
-          ) : (
-            <PrimaryButton
-              label={`Pay ${formatPrice(offer.price)}`}
-              onPress={handlePay}
-              loading={processing}
-              loadingLabel="Processing payment"
-            />
-          )}
+        <ThemedView style={[styles.footer, { borderTopColor: palette.line, paddingBottom: insets.bottom + Spacing.three }]}>
+          <PrimaryButton
+            label={inStock ? "Simulate payment & get pickup QR" : "Sold out"}
+            onPress={handlePay}
+            disabled={!inStock}
+            loading={processing}
+            loadingLabel="Generating pickup ticket"
+          />
         </ThemedView>
       </ThemedView>
     </KeyboardAvoidingView>
@@ -279,56 +233,12 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.three,
-    padding: Spacing.four,
-  },
-  textCenter: {
-    textAlign: "center",
-  },
-  successIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successCheck: {
-    fontSize: 36,
-    lineHeight: 42,
-    fontWeight: 700,
-  },
-  content: {
-    ...ui.content,
-  },
-  summary: {
-    ...ui.card,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    flexWrap: "wrap",
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-  },
-  section: {
-    gap: Spacing.two,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
-  footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: Spacing.three,
-    paddingHorizontal: Spacing.four,
-  },
+  flex: { flex: 1 },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: Spacing.three, padding: Spacing.four },
+  content: { ...ui.content },
+  summary: { ...ui.card, flexDirection: "row", alignItems: "center", gap: Spacing.three, flexWrap: "wrap" },
+  notice: { borderWidth: 1, borderRadius: Spacing.three, padding: Spacing.three },
+  section: { gap: Spacing.two },
+  sectionTitle: { fontSize: 24, lineHeight: 30 },
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: Spacing.three, paddingHorizontal: Spacing.four },
 });

@@ -5,7 +5,6 @@ import BookCard from "../BookCard";
 import { useListingBooks } from "../data";
 import { palette } from "@/components/book-flow/ui";
 import { MUTED, TEXT } from "../theme";
-import TopBar from "../TopBar";
 import { applyFilters, countActiveFilters } from "./components/applyFilters";
 import { DEFAULT_FILTERS } from "./components/constants";
 import FilterPanel from "./components/FilterPanel";
@@ -27,7 +26,6 @@ export default function CatalogPage() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
-      <View style={{ paddingHorizontal: 20, paddingVertical: 8 }}><TopBar /></View>
 
       <SearchBar
         value={query}

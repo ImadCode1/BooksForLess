@@ -127,13 +127,13 @@ export function CardForm({
       {showSaveToggle && (
         <View style={styles.saveRow}>
           <ThemedText type="small" style={styles.flex}>
-            Remember this card
+            Remember this card for this session
           </ThemedText>
           <Switch
             value={value.save}
             onValueChange={(save) => update({ save })}
             trackColor={{ true: palette.blue, false: theme.backgroundSelected }}
-            accessibilityLabel="Remember this card"
+            accessibilityLabel="Remember this card for this session"
           />
         </View>
       )}

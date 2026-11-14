@@ -81,7 +81,7 @@ export default function BookDetailsScreen() {
 
   const canBuy = !!selectedOffer && selectedOffer.quantity > 0;
   const buyLabel = canBuy
-    ? `Buy · ${formatPrice(selectedOffer.price)}`
+    ? "Continue to checkout"
     : "Not available";
 
   return (

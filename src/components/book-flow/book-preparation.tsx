@@ -104,7 +104,7 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
           </View>
           <View style={ui.card} accessible accessibilityLiveRegion="polite"
             accessibilityLabel={cents !== null ? `Your price: ${formatCad(cents)}` : newPrice ? 'Choose a condition to see your price' : 'Calculating your price'}>
-            <Text style={ui.caption}>Your price</Text>
+            <Text style={ui.caption}>Suggested price</Text>
             {!newPrice ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <ActivityIndicator color={palette.blue} />
@@ -117,6 +117,9 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
                 </Text>
                 <Text style={ui.body}>
                   {Math.round(CONDITION_SHARE[condition!] * 100)}% of the new price ({formatCad(newPrice.cents)}), for a {condition!.toLowerCase()} copy.
+                </Text>
+                <Text style={ui.caption}>
+                  {newPrice.source === 'google-books' ? 'Google Books reference' : newPrice.source === 'catalog' ? 'Sample catalog reference' : 'Estimated reference'}
                 </Text>
               </>
             ) : (
@@ -143,6 +146,8 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
             <Text style={ui.body}>{book.authors.join(', ') || 'Author not provided'}</Text>
             <Text style={ui.label}>{condition} · {cents !== null ? formatCad(cents) : ''}</Text>
           </View>
+          <Text style={ui.caption}>Book details, condition, price, and ticket ID are public. Photos stay on your device.</Text>
+          <Text style={ui.body}>Keep the QR ticket for the proposed co-op drop-off.</Text>
           <ActionButton title={saving ? 'Saving book…' : 'Save book & generate QR'} disabled={saving} onPress={() => { void generate(); }} />
           <ActionButton title="Back to photo" secondary disabled={saving} onPress={() => setStep('photo')} />
         </>
@@ -150,7 +155,7 @@ export function BookPreparation({ book, onCancel, onStartAnother }: { book: Book
       {step === 'ticket' && ticket ? (
         <>
           <TicketCard ticket={ticket} />
-          <ActionButton title="View My Books" onPress={() => router.navigate('/my-books')} />
+          <ActionButton title="View My Books" onPress={() => router.navigate({ pathname: '/my-books', params: { tab: 'selling' } })} />
           <ActionButton title="Scan another book" secondary onPress={onStartAnother} />
         </>
       ) : null}

@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton, SecondaryButton } from "@/components/buttons";
+import { PrimaryButton } from "@/components/buttons";
 import {
   CardForm,
   type CardFormValue,
@@ -12,9 +14,8 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { ui } from "@/components/book-flow/ui";
+import { palette, ui } from "@/components/book-flow/ui";
 import { formatPrice } from "@/data/books";
-import { DEMO_ACCOUNT } from "@/data/demo-account";
 import { useOrders } from "@/services/orders";
 import {
   DEFAULT_CARD,
@@ -26,13 +27,12 @@ import {
 } from "@/services/payment-methods";
 
 export default function ProfileScreen() {
+  useColorScheme();
   return (
     <ThemedView style={styles.screen}>
-      {/* No stack header inside the tabs, so Android needs the top inset;
-          on iOS the scroll view's automatic inset handles it. */}
       <SafeAreaView
         style={styles.screen}
-        edges={Platform.OS === "android" ? ["top", "left", "right"] : ["left", "right"]}>
+        edges={["left", "right", "bottom"]}>
         <KeyboardAvoidingView
           style={styles.screen}
           behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -40,23 +40,6 @@ export default function ProfileScreen() {
             contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled">
-            <Text accessibilityRole="header" style={ui.heading}>Profile</Text>
-            {/* Built-in demo account; there is no sign-in. */}
-            <ThemedView type="backgroundElement" style={styles.userCard}>
-              <View style={styles.avatar}>
-                <ThemedText style={styles.avatarText}>👤</ThemedText>
-              </View>
-              <View style={styles.flex}>
-                <ThemedText type="smallBold">{DEMO_ACCOUNT.name}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {DEMO_ACCOUNT.email}
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Demo account · {DEMO_ACCOUNT.school}
-                </ThemedText>
-              </View>
-            </ThemedView>
-
             <OrdersSection />
             <PaymentMethodsSection />
           </ScrollView>
@@ -67,6 +50,7 @@ export default function ProfileScreen() {
 }
 
 function OrdersSection() {
+  useColorScheme();
   const orders = useOrders();
 
   return (
@@ -74,22 +58,30 @@ function OrdersSection() {
       <ThemedText type="smallBold">My orders</ThemedText>
       {orders.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
-          No orders yet. Books you buy will appear here.
+          No orders yet. Your pickup tickets will appear here after checkout.
         </ThemedText>
       ) : (
         orders.map((order) => (
-          <ThemedView key={order.id} type="backgroundElement" style={styles.item}>
-            <View style={styles.itemRow}>
-              <ThemedText type="smallBold" style={styles.flex}>
-                {order.title}
-              </ThemedText>
-              <ThemedText type="smallBold">{formatPrice(order.price)}</ThemedText>
-            </View>
-            <ThemedText type="small" themeColor="textSecondary">
-              {order.condition} · {order.createdAt.toLocaleDateString()} ·{" "}
-              {order.paymentMethod}
-            </ThemedText>
-          </ThemedView>
+          <Pressable
+            key={order.id}
+            accessibilityRole="button"
+            accessibilityLabel={`View pickup QR for ${order.title}, ${formatPrice(order.price)}`}
+            accessibilityHint="Opens your pickup ticket"
+            onPress={() => router.push({ pathname: "/pickup/[id]", params: { id: order.id } })}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+            <ThemedView type="backgroundElement" style={[styles.item, styles.itemRow]}>
+              <View style={[styles.flex, { gap: 6 }]}>
+                <ThemedText type="smallBold">{order.title}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {order.condition} · {order.createdAt.toLocaleDateString()}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: "flex-end", gap: 10 }}>
+                <ThemedText type="smallBold" style={{ fontVariant: ["tabular-nums"] }}>{formatPrice(order.price)}</ThemedText>
+                <SymbolView name={{ ios: "qrcode", android: "qr_code", web: "qr_code" }} size={22} tintColor={palette.accentText} />
+              </View>
+            </ThemedView>
+          </Pressable>
         ))
       )}
     </View>
@@ -97,6 +89,7 @@ function OrdersSection() {
 }
 
 function PaymentMethodsSection() {
+  useColorScheme();
   const cards = useSavedCards();
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState<CardFormValue>(EMPTY_CARD_FORM);
@@ -119,7 +112,16 @@ function PaymentMethodsSection() {
 
   return (
     <View style={styles.section}>
-      <ThemedText type="smallBold">Payment methods</ThemedText>
+      <View style={styles.sectionHeader}>
+        <ThemedText type="smallBold" style={styles.flex}>Payment methods</ThemedText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={adding ? "Cancel adding payment method" : "Add payment method"}
+          onPress={adding ? close : () => setAdding(true)}
+          style={({ pressed }) => ({ minHeight: 48, minWidth: 48, justifyContent: "center", alignItems: "center", opacity: pressed ? 0.6 : 1 })}>
+          <ThemedText type="smallBold" style={{ color: palette.accentText }}>{adding ? "Cancel" : "Add"}</ThemedText>
+        </Pressable>
+      </View>
       {cards.length === 0 && !adding && (
         <ThemedText type="small" themeColor="textSecondary">
           No saved cards yet.
@@ -150,11 +152,8 @@ function PaymentMethodsSection() {
             showSaveToggle={false}
           />
           <PrimaryButton label="Save card" onPress={handleSave} />
-          <SecondaryButton label="Cancel" onPress={close} />
         </ThemedView>
-      ) : (
-        <SecondaryButton label="+ Add payment method" onPress={() => setAdding(true)} />
-      )}
+      ) : null}
     </View>
   );
 }
@@ -169,24 +168,7 @@ const styles = StyleSheet.create({
   content: {
     ...ui.content,
   },
-  userCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.four,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    fontSize: 28,
-    lineHeight: 34,
-  },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   section: {
     gap: Spacing.two,
   },
@@ -197,6 +179,7 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: Spacing.two,
   },

@@ -10,7 +10,10 @@ export function DevMenu({ busy, onPreview, onReset }: {
   useColorScheme();
   const [open, setOpen] = useState(false);
   const trigger = (
-    <View accessible accessibilityRole="button" accessibilityLabel="Developer settings"
+    <View
+      accessible={process.env.EXPO_OS !== 'web'}
+      accessibilityRole={process.env.EXPO_OS === 'web' ? undefined : 'button'}
+      accessibilityLabel={process.env.EXPO_OS === 'web' ? undefined : 'Developer settings'}
       style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: palette.soft }}>
       <Text style={{ fontSize: 26, lineHeight: 30, color: palette.accentText }}>•••</Text>
     </View>

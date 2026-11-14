@@ -26,8 +26,8 @@ const slides = [
   },
   {
     title: 'Keep your ticket handy.',
-    body: 'Save your book and get a QR ticket in My Books. Bring it to the campus co-op drop-off.',
-    detail: 'No signup needed.',
+    body: 'Save your book and get a QR ticket in My Books for the proposed campus co-op drop-off.',
+    detail: 'No signup. Submitted book details are public.',
   },
 ];
 

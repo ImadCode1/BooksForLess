@@ -19,9 +19,6 @@ export default function AppTabs() {
         <TabTrigger name="my-books" href="/my-books" style={[styles.tab, pathname === '/my-books' && styles.selected]}>
           <Text style={styles.label}>My Books</Text>
         </TabTrigger>
-        <TabTrigger name="profile" href="/profile" style={[styles.tab, pathname === '/profile' && styles.selected]}>
-          <Text style={styles.label}>Profile</Text>
-        </TabTrigger>
       </TabList>
     </Tabs>
   );

@@ -27,6 +27,9 @@ const { DEMO_BOOKS, DEMO_ISBN } = load('src/data/demo-books.ts');
 const { lookupBook } = load('src/services/books.ts');
 const { prepareSellingBook, getPendingSellingBook } = load('src/services/selling-handoff.ts');
 const { parseCadPrice, formatCad, createLocalTicket, ticketQrValue } = load('src/utils/tickets.ts');
+const { addOrder } = load('src/services/orders.ts');
+const { pickupQrValue } = load('src/utils/pickup.ts');
+const { getBookFeedback, setBookCompleted, rateBookExperience } = load('src/services/book-feedback.ts');
 
 test('ISBN-13 validates checksum, prefix, length, and permitted formatting', () => {
   assert.equal(normalizeIsbn('978-0 262033848'), DEMO_ISBN);
@@ -151,4 +154,46 @@ test('invalid ticket drafts cannot create a QR ticket', () => {
     { priceCents: 0.5 }, { priceCents: NaN }, { priceCents: 1000000 },
     { book: { ...draft.book, title: '' } },
   ]) assert.throws(() => createLocalTicket({ ...draft, ...changes }), /required/);
+});
+
+test('pickup orders need no address and keep unique, stable scannable QR identities', () => {
+  const draft = {
+    isbn: DEMO_ISBN, title: 'Introduction to Algorithms', condition: 'Good',
+    price: 25, paymentMethod: 'Visa •••• 1111',
+  };
+  const order = addOrder(draft);
+  const second = addOrder(draft);
+  assert.notEqual(order.id, second.id);
+  assert.equal(order.price, draft.price);
+  assert.equal(Object.hasOwn(order, 'shippingAddress'), false);
+  assert.ok(order.createdAt instanceof Date);
+  assert.equal(pickupQrValue(order), `booksforless:pickup:${order.id}`);
+  assert.equal(pickupQrValue(order), pickupQrValue(order));
+  assert.notEqual(pickupQrValue(order), pickupQrValue(second));
+  assert.equal(pickupQrValue(order).includes(draft.paymentMethod), false);
+  assert.ok(require('qrcode').create(pickupQrValue(order)).modules.size >= 21);
+});
+
+test('experience ratings are optional and only accepted after confirmation', () => {
+  const key = 'sale:unit-test-one';
+  assert.equal(getBookFeedback(key), getBookFeedback(key), 'stable empty snapshot');
+  rateBookExperience(key, 4);
+  assert.deepEqual(getBookFeedback(key), { completed: false, rating: null });
+  setBookCompleted(key, true);
+  assert.deepEqual(getBookFeedback(key), { completed: true, rating: null });
+  rateBookExperience(key, 4);
+  assert.deepEqual(getBookFeedback(key), { completed: true, rating: 4 });
+  for (const invalid of [0, 6, -1, 2.5, NaN, Infinity]) rateBookExperience(key, invalid);
+  assert.equal(getBookFeedback(key).rating, 4);
+});
+
+test('selling and receiving confirmations are separate and can be undone', () => {
+  setBookCompleted('sale:unit-test-two', true);
+  rateBookExperience('sale:unit-test-two', 5);
+  assert.deepEqual(getBookFeedback('purchase:unit-test-two'), { completed: false, rating: null });
+  setBookCompleted('purchase:unit-test-two', true);
+  rateBookExperience('purchase:unit-test-two', 3);
+  setBookCompleted('sale:unit-test-two', false);
+  assert.deepEqual(getBookFeedback('sale:unit-test-two'), { completed: false, rating: null });
+  assert.deepEqual(getBookFeedback('purchase:unit-test-two'), { completed: true, rating: 3 });
 });
