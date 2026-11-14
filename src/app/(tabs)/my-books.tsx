@@ -10,25 +10,25 @@ import { TicketCard } from '@/components/book-flow/ticket-card';
 import { useTickets } from '@/components/book-flow/ticket-provider';
 import { ActionButton, Notice, palette, ui } from '@/components/book-flow/ui';
 import { formatPrice } from '@/data/books';
-import { type Order, useOrders } from '@/services/orders';
-import type { LocalTicket } from '@/types/local-ticket';
+import { useOrders } from '@/services/orders';
+import { useBookFeedbackSnapshot } from '@/services/book-feedback';
+import { type LibraryItem, type LibrarySection, selectLibraryItems } from '@/utils/my-books';
 
-type LibraryItem = { kind: 'sale'; ticket: LocalTicket } | { kind: 'purchase'; order: Order };
-type Section = 'purchases' | 'selling';
+const SECTION_LABELS = { purchases: 'Purchases', selling: 'Selling', history: 'History' } as const;
 
 export default function MyBooksScreen() {
   useColorScheme();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
-  const section: Section = tab === 'purchases' ? 'purchases' : 'selling';
+  const section: LibrarySection = tab === 'purchases' || tab === 'history' ? tab : 'selling';
   const { tickets, loading, error, refresh } = useTickets();
   const orders = useOrders();
+  const feedback = useBookFeedbackSnapshot();
   const list = useRef<FlatList<LibraryItem>>(null);
   const { replay, resetOnNextLaunch } = useOnboarding();
   const [resetting, setResetting] = useState(false);
   const [devMessage, setDevMessage] = useState('');
-  const data: LibraryItem[] = section === 'purchases'
-    ? orders.map((order) => ({ kind: 'purchase', order }))
-    : tickets.map((ticket) => ({ kind: 'sale', ticket }));
+  const data = selectLibraryItems(tickets, orders, feedback, section);
+  const showsSharedBooks = section !== 'purchases';
 
   async function resetOnboarding() {
     setResetting(true);
@@ -43,7 +43,7 @@ export default function MyBooksScreen() {
     }
   }
 
-  function selectSection(next: Section) {
+  function selectSection(next: LibrarySection) {
     router.setParams({ tab: next });
     list.current?.scrollToOffset({ offset: 0, animated: false });
   }
@@ -54,8 +54,8 @@ export default function MyBooksScreen() {
         ref={list}
         style={ui.page}
         contentInsetAdjustmentBehavior="automatic"
-        refreshing={section === 'selling' && loading}
-        onRefresh={section === 'selling' ? () => { void refresh(); } : undefined}
+        refreshing={showsSharedBooks && loading}
+        onRefresh={showsSharedBooks ? () => { void refresh(); } : undefined}
         data={data}
         keyExtractor={(item) => item.kind === 'sale' ? `sale:${item.ticket.id}` : `purchase:${item.order.id}`}
         contentContainerStyle={[ui.content, { gap: 0 }]}
@@ -66,11 +66,11 @@ export default function MyBooksScreen() {
             {__DEV__ ? <DevMenu busy={resetting} onPreview={replay} onReset={() => { void resetOnboarding(); }} /> : null}
           </View>
           <View accessibilityRole="tablist" style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: palette.line }}>
-            {(['purchases', 'selling'] as const).map((value) => (
+            {(['purchases', 'selling', 'history'] as const).map((value) => (
               <Pressable
                 key={value}
                 accessibilityRole="tab"
-                accessibilityLabel={value === 'purchases' ? 'Purchases' : 'Selling'}
+                accessibilityLabel={SECTION_LABELS[value]}
                 accessibilityState={{ selected: section === value }}
                 onPress={() => selectSection(value)}
                 style={({ pressed }) => ({
@@ -80,21 +80,24 @@ export default function MyBooksScreen() {
                   opacity: pressed ? 0.6 : 1,
                 })}>
                 <Text style={[ui.label, { color: section === value ? palette.accentText : palette.muted }]}>
-                  {value === 'purchases' ? 'Purchases' : 'Selling'}
+                  {SECTION_LABELS[value]}
                 </Text>
               </Pressable>
             ))}
           </View>
           {section === 'selling' ? <Text style={ui.caption}>Shared collection. Book details are public; photos stay on your device.</Text> : null}
-          {section === 'selling' && error ? <><Notice>{error}</Notice><ActionButton title="Retry loading books" secondary onPress={() => { void refresh(); }} /></> : null}
+          {showsSharedBooks && error ? <><Notice>{error}</Notice><ActionButton title="Retry loading books" secondary onPress={() => { void refresh(); }} /></> : null}
           {__DEV__ && devMessage ? <Notice>{devMessage}</Notice> : null}
         </View>}
         ListEmptyComponent={section === 'purchases' ? <View style={ui.card}>
-          <Text style={ui.title}>No purchases yet.</Text>
+          <Text style={ui.title}>No active purchases.</Text>
           <Text style={ui.body}>Find your next textbook and keep its pickup QR here.</Text>
           <ActionButton title="Browse books" onPress={() => router.navigate('/')} />
-        </View> : loading ? <ActivityIndicator style={{ padding: 24 }} accessibilityLabel="Loading shared books" /> : error ? undefined : <View style={ui.card}>
-          <Text style={ui.title}>Your first book starts here.</Text>
+        </View> : loading ? <ActivityIndicator style={{ padding: 24 }} accessibilityLabel="Loading shared books" /> : error ? undefined : section === 'history' ? <View style={ui.card}>
+          <Text style={ui.title}>No reviewed books yet.</Text>
+          <Text style={ui.body}>Books move here after you save a selling or pickup review.</Text>
+        </View> : <View style={ui.card}>
+          <Text style={ui.title}>No active selling books.</Text>
           <Text style={ui.body}>Scan a textbook and create your first QR ticket.</Text>
           <ActionButton title="Scan a book" onPress={() => router.navigate('/scan')} />
         </View>}

@@ -29,7 +29,8 @@ const { prepareSellingBook, getPendingSellingBook } = load('src/services/selling
 const { parseCadPrice, formatCad, createLocalTicket, ticketQrValue } = load('src/utils/tickets.ts');
 const { addOrder } = load('src/services/orders.ts');
 const { pickupQrValue } = load('src/utils/pickup.ts');
-const { getBookFeedback, setBookCompleted, rateBookExperience } = load('src/services/book-feedback.ts');
+const { getBookFeedback, getBookFeedbackSnapshot, setBookCompleted, rateBookExperience } = load('src/services/book-feedback.ts');
+const { selectLibraryItems } = load('src/utils/my-books.ts');
 
 test('ISBN-13 validates checksum, prefix, length, and permitted formatting', () => {
   assert.equal(normalizeIsbn('978-0 262033848'), DEMO_ISBN);
@@ -196,4 +197,53 @@ test('selling and receiving confirmations are separate and can be undone', () =>
   setBookCompleted('sale:unit-test-two', false);
   assert.deepEqual(getBookFeedback('sale:unit-test-two'), { completed: false, rating: null });
   assert.deepEqual(getBookFeedback('purchase:unit-test-two'), { completed: true, rating: 3 });
+});
+
+test('reviewed sales and purchases move exclusively into History without changing their tickets', () => {
+  const ticket = { id: 'history-shared-id', book: DEMO_BOOKS[0], photoUri: 'file:///cover.jpg' };
+  const order = { id: ticket.id, title: 'Purchased book' };
+  const select = (section) => selectLibraryItems([ticket], [order], getBookFeedbackSnapshot(), section);
+  assert.equal(select('selling')[0].ticket, ticket);
+  assert.equal(select('purchases')[0].order, order);
+  assert.deepEqual(select('history'), []);
+
+  setBookCompleted(`sale:${ticket.id}`, true);
+  // Completed without a saved rating (Not now/Cancel) stays active.
+  assert.equal(select('selling').length, 1);
+  assert.deepEqual(select('history'), []);
+  rateBookExperience(`sale:${ticket.id}`, 5);
+  assert.deepEqual(select('selling'), []);
+  assert.equal(select('purchases').length, 1);
+  assert.deepEqual(select('history'), [{ kind: 'sale', ticket }]);
+
+  setBookCompleted(`purchase:${order.id}`, true);
+  rateBookExperience(`purchase:${order.id}`, 1);
+  assert.deepEqual(select('purchases'), []);
+  assert.deepEqual(select('history'), [{ kind: 'purchase', order }, { kind: 'sale', ticket }]);
+
+  rateBookExperience(`sale:${ticket.id}`, 3);
+  assert.equal(select('history').length, 2, 'Editing does not duplicate archived books');
+  setBookCompleted(`sale:${ticket.id}`, false);
+  assert.equal(select('selling')[0].ticket, ticket);
+  assert.deepEqual(select('history'), [{ kind: 'purchase', order }]);
+  setBookCompleted(`purchase:${order.id}`, false);
+  assert.equal(select('purchases')[0].order, order);
+  assert.deepEqual(select('history'), []);
+});
+
+test('feedback snapshots stay stable between updates and do not mutate previous snapshots', () => {
+  const key = 'sale:history-snapshot';
+  const initial = getBookFeedbackSnapshot();
+  assert.equal(getBookFeedbackSnapshot(), initial);
+  setBookCompleted(key, true);
+  const completed = getBookFeedbackSnapshot();
+  assert.notEqual(completed, initial);
+  assert.equal(initial.has(key), false);
+  rateBookExperience(key, 4);
+  const reviewed = getBookFeedbackSnapshot();
+  assert.notEqual(reviewed, completed);
+  assert.equal(completed.get(key).rating, null);
+  assert.equal(reviewed.get(key).rating, 4);
+  rateBookExperience(key, 0);
+  assert.equal(getBookFeedbackSnapshot(), reviewed, 'Invalid ratings do not change the list snapshot');
 });

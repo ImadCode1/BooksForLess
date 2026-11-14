@@ -64,7 +64,12 @@ export default function ReviewScreen() {
           <ActionButton
             title="Save review"
             disabled={selected === null}
-            onPress={() => { if (selected !== null) { rateBookExperience(key, selected); close(); } }}
+             onPress={() => {
+               if (selected !== null) {
+                 rateBookExperience(key, selected);
+                 router.dismissTo({ pathname: "/my-books", params: { tab: "history" } });
+               }
+             }}
           />
           <ActionButton title={rating === null ? "Not now" : "Cancel"} secondary onPress={close} />
         </View>
