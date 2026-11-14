@@ -2,6 +2,7 @@ import { View, type ViewProps } from 'react-native';
 
 import { ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { palette } from '@/components/book-flow/ui';
 
 export type ThemedViewProps = ViewProps & {
   lightColor?: string;
@@ -12,5 +13,8 @@ export type ThemedViewProps = ViewProps & {
 export function ThemedView({ style, lightColor, darkColor, type, ...otherProps }: ThemedViewProps) {
   const theme = useTheme();
 
-  return <View style={[{ backgroundColor: theme[type ?? 'background'] }, style]} {...otherProps} />;
+  const backgroundColor = !type || type === 'background' ? palette.background
+    : type === 'backgroundElement' ? palette.paper
+    : type === 'backgroundSelected' ? palette.soft : theme[type];
+  return <View style={[{ backgroundColor }, style]} {...otherProps} />;
 }

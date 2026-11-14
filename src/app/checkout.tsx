@@ -27,7 +27,8 @@ import {
 import { OptionRow } from "@/components/option-row";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { ActionButton, palette, ui } from "@/components/book-flow/ui";
+import { Spacing } from "@/constants/theme";
 import { type BookCondition, formatPrice, getBookByIsbn } from "@/data/books";
 import { useTheme } from "@/hooks/use-theme";
 import {
@@ -107,11 +108,12 @@ export default function CheckoutScreen() {
   if (!book || !offer) {
     return (
       <ThemedView style={styles.centered}>
-        <Stack.Screen options={{ title: "Payment" }} />
+        <Stack.Screen options={{ title: "Demo checkout" }} />
         <ThemedText type="subtitle">Nothing to pay for</ThemedText>
         <ThemedText themeColor="textSecondary">
           This book or quality could not be found.
         </ThemedText>
+        <ActionButton title="Browse books" onPress={() => router.replace("/")} />
       </ThemedView>
     );
   }
@@ -119,24 +121,24 @@ export default function CheckoutScreen() {
   if (receipt) {
     return (
       <ThemedView style={[styles.centered, { paddingBottom: insets.bottom }]}>
-        <Stack.Screen options={{ title: "Order placed", headerBackVisible: false }} />
+        <Stack.Screen options={{ title: "Demo complete", headerBackVisible: false }} />
         <View style={[styles.successIcon, { backgroundColor: theme.success }]}>
           <ThemedText style={[styles.successCheck, { color: theme.background }]}>
             ✓
           </ThemedText>
         </View>
         <ThemedText type="subtitle" style={styles.textCenter}>
-          Payment successful
+          Demo checkout complete
         </ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.textCenter}>
-          You bought {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
-          with {receipt.method}.
+          Simulated purchase of {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
+          with {receipt.method}. No money was charged and no real order was placed.
         </ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.textCenter}>
-          Ships to {receipt.address.fullName}, {formatAddressLine(receipt.address)}.
+          Demo delivery address: {receipt.address.fullName}, {formatAddressLine(receipt.address)}. Nothing will be shipped.
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.textCenter}>
-          You can find this order in your Profile.
+          This simulated order is saved for this session.
         </ThemedText>
         <PrimaryButton label="Back to book" onPress={() => router.back()} />
       </ThemedView>
@@ -246,7 +248,7 @@ export default function CheckoutScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
       <ThemedView style={styles.flex}>
-        <Stack.Screen options={{ title: step === "payment" ? "Payment" : "Delivery" }} />
+        <Stack.Screen options={{ title: step === "payment" ? "Demo payment" : "Demo delivery" }} />
         <ScrollView
           ref={scrollRef}
           contentInsetAdjustmentBehavior="automatic"
@@ -256,7 +258,6 @@ export default function CheckoutScreen() {
             Step {step === "payment" ? 1 : 2} of 2 ·{" "}
             {step === "payment" ? "Payment method" : "Delivery address"}
           </ThemedText>
-
           <ThemedView type="backgroundElement" style={styles.summary}>
             <View style={styles.flex}>
               <ThemedText type="smallBold">{book.title}</ThemedText>
@@ -322,7 +323,7 @@ export default function CheckoutScreen() {
                   Add a card
                 </ThemedText>
                 <ThemedText themeColor="textSecondary">
-                  You don&apos;t have a saved card yet. Add one to complete your purchase.
+                  Use a test card to try the checkout. Nothing is charged or sent to a payment provider.
                 </ThemedText>
                 <CardForm
                   value={cardForm}
@@ -381,7 +382,7 @@ export default function CheckoutScreen() {
                     Add a delivery address
                   </ThemedText>
                   <ThemedText themeColor="textSecondary">
-                    Where should we send your book?
+                    Enter a sample address to try the delivery step. Nothing will be shipped.
                   </ThemedText>
                   <AddressForm
                     value={addressForm}
@@ -398,7 +399,7 @@ export default function CheckoutScreen() {
           style={[
             styles.footer,
             {
-              borderTopColor: theme.backgroundSelected,
+              borderTopColor: palette.line,
               paddingBottom: insets.bottom + Spacing.three,
             },
           ]}>
@@ -408,10 +409,10 @@ export default function CheckoutScreen() {
             <PrimaryButton label="Continue" onPress={handleContinue} />
           ) : (
             <PrimaryButton
-              label={`Pay ${formatPrice(offer.price)}`}
+              label={`Simulate payment ${formatPrice(offer.price)}`}
               onPress={handlePay}
               loading={processing}
-              loadingLabel="Processing payment"
+              loadingLabel="Processing demo"
             />
           )}
         </ThemedView>
@@ -447,18 +448,14 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   content: {
-    padding: Spacing.four,
-    gap: Spacing.four,
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    alignSelf: "center",
+    ...ui.content,
   },
   summary: {
+    ...ui.card,
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
+    flexWrap: "wrap",
   },
   notice: {
     borderWidth: 1,

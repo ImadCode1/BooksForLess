@@ -1,40 +1,39 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { router, useFocusEffect, useIsFocused } from 'expo-router';
+import { useFocusEffect, useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   AppState,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  useColorScheme,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-screens/experimental';
 
-import { PrimaryButton, SecondaryButton } from '@/components/buttons';
-import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Spacing } from '@/constants/theme';
 import { DEMO_ISBN } from '@/data/demo-books';
-import { useTheme } from '@/hooks/use-theme';
+import { BookPreparation } from '@/components/book-flow/book-preparation';
+import { BookPreview } from '@/components/book-flow/book-preview';
+import { useOnboarding } from '@/components/book-flow/onboarding';
+import { ActionButton as Button, palette, StepProgress, ui } from '@/components/book-flow/ui';
 import { lookupBook } from '@/services/books';
-import { prepareSellingBook, SELLING_ROUTE } from '@/services/selling-handoff';
+import { prepareSellingBook } from '@/services/selling-handoff';
 import type { BookMetadata } from '@/types/book-metadata';
 import { isValidIsbn13, normalizeIsbn } from '@/utils/isbn';
 
-type Stage = 'input' | 'loading' | 'manual' | 'confirm';
+type Stage = 'input' | 'loading' | 'manual' | 'confirm' | 'prepare';
 
 export default function ScanScreen() {
-  const theme = useTheme();
+  useColorScheme();
   const [permission, requestPermission, refreshPermission] = useCameraPermissions();
   const isFocused = useIsFocused();
+  const { complete: onboardingComplete } = useOnboarding();
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [stage, setStage] = useState<Stage>('input');
   const [isbn, setIsbn] = useState('');
@@ -44,10 +43,8 @@ export default function ScanScreen() {
   const [message, setMessage] = useState('');
   const [cameraError, setCameraError] = useState(false);
   const [cameraPaused, setCameraPaused] = useState(false);
-  const [coverFailed, setCoverFailed] = useState(false);
   const locked = useRef(false);
   const request = useRef<AbortController | null>(null);
-  const continuing = useRef(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
@@ -60,7 +57,6 @@ export default function ScanScreen() {
   }, [refreshPermission]);
 
   useFocusEffect(useCallback(() => {
-    continuing.current = false;
     // Recover if an in-flight lookup was cancelled when this screen lost focus.
     setStage((current) => current === 'loading' ? 'input' : current);
     locked.current = false;
@@ -94,7 +90,6 @@ export default function ScanScreen() {
       if (controller.signal.aborted || request.current !== controller) return;
       if (result.status === 'found') {
         setBook(result.book);
-        setCoverFailed(false);
         setStage('confirm');
       } else {
         setTitle('');
@@ -121,7 +116,6 @@ export default function ScanScreen() {
     request.current?.abort();
     request.current = null;
     locked.current = false;
-    continuing.current = false;
     setStage('input');
     setBook(null);
     setIsbn('');
@@ -143,49 +137,35 @@ export default function ScanScreen() {
       authors: author.trim() ? [author.trim()] : [],
       source: 'manual',
     });
-    setCoverFailed(false);
     setMessage('');
     setStage('confirm');
   }
 
   function continueToSelling() {
-    if (!book || continuing.current) return;
+    if (!book) return;
     prepareSellingBook(book);
-    if (SELLING_ROUTE) {
-      continuing.current = true;
-      router.push(SELLING_ROUTE);
-    } else {
-      Alert.alert('Book confirmed', 'Your book is ready in local memory. The Selling page is not connected yet.');
-    }
+    setStage('prepare');
   }
 
-  const showCamera = stage === 'input' && isFocused && appActive &&
+  const showCamera = stage === 'input' && isFocused && appActive && onboardingComplete &&
     permission?.granted && !cameraError && !cameraPaused;
 
-  const sourceLabel = book?.source === 'demo' ? 'Offline demo data'
-    : book?.source === 'manual' ? 'Entered manually'
-    : 'From Open Library';
-
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={{ top: process.env.EXPO_OS === 'android', left: true, right: true }}>
       <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <ThemedText style={styles.heading}>Sell a textbook</ThemedText>
-            <ThemedText themeColor="textSecondary">
-              Scan the barcode on the back cover, or type the ISBN.
-            </ThemedText>
-          </View>
-
-          {message ? (
-            <View accessibilityLiveRegion="polite" style={styles.notice}>
-              <Text style={styles.noticeText}>{message}</Text>
-            </View>
-          ) : null}
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {stage !== 'prepare' ? <>
+            <Text style={styles.brand}>BooksForLess</Text>
+            <StepProgress current={1} />
+            <Text style={styles.heading}>{stage === 'confirm' ? 'Meet your book.' : 'A new chapter starts here.'}</Text>
+            <Text style={styles.body}>Scan the barcode. Give your textbook a second life.</Text>
+          </> : null}
+          {stage === 'prepare' && book ? <BookPreparation book={book} onCancel={() => setStage('confirm')} onStartAnother={reset} /> : null}
+          {message ? <Text selectable accessibilityLiveRegion="polite" style={styles.notice}>{message}</Text> : null}
 
           {stage === 'input' ? (
             <>
-              <View style={styles.camera}>
+              <View style={[styles.camera, { minHeight: 240, paddingVertical: showCamera ? 0 : 12 }]}>
                 {showCamera ? (
                   <>
                     <CameraView
@@ -200,233 +180,111 @@ export default function ScanScreen() {
                     />
                     <View pointerEvents="none" style={styles.overlay}>
                       <View style={styles.guide} />
-                      <View style={styles.cameraPill}>
-                        <Text style={styles.cameraText}>Line up the barcode inside the frame</Text>
-                      </View>
+                      <Text style={styles.cameraText}>Place the book barcode inside the frame</Text>
                     </View>
                   </>
                 ) : (
                   <View style={styles.cameraPlaceholder}>
                     <Text style={styles.cameraText}>
                       {!permission ? 'Checking camera permission…'
-                        : cameraPaused ? 'Scanning paused: this barcode is not a valid ISBN-13.'
+                        : cameraPaused ? 'Camera paused. Enter an ISBN below or resume scanning.'
                         : cameraError ? 'Camera could not start.'
                         : permission.granted ? 'Camera paused.'
-                        : 'Camera access is only used to scan barcodes. You can always type the ISBN instead.'}
+                        : 'Camera access is needed only for barcode scanning. Manual entry is always available.'}
                     </Text>
                     {permission && !permission.granted ? (
-                      <CameraButton
-                        label={permission.canAskAgain ? 'Allow camera access' : 'Open Settings'}
+                      <Button
+                        title={permission.canAskAgain ? 'Allow camera access' : 'Open Settings'}
                         onPress={() => {
                           const action = permission.canAskAgain ? requestPermission() : Linking.openSettings();
                           void action.catch(() => setMessage('Unable to open camera permissions. Use manual entry.'));
                         }}
                       />
                     ) : null}
-                    {cameraPaused || cameraError ? <CameraButton label="Try scanning again" onPress={reset} /> : null}
+                    {cameraPaused || cameraError ? <Button title="Try scanning again" onPress={reset} /> : null}
                   </View>
                 )}
               </View>
-              {cameraPaused ? (
-                <SecondaryButton label="Resume camera scanning" onPress={() => {
+              <Text style={styles.label} nativeID="isbn-label">Enter ISBN-13</Text>
+              <TextInput
+                accessibilityLabel="ISBN-13"
+                style={[styles.input, { fontVariant: ['tabular-nums'] }]}
+                placeholder="e.g. 9780262033848"
+                placeholderTextColor={palette.muted}
+                keyboardType="number-pad"
+                value={isbn}
+                onFocus={() => {
                   locked.current = false;
-                  setCameraPaused(false);
-                  setMessage('');
-                  Keyboard.dismiss();
-                }} />
-              ) : null}
-
-              <View style={styles.divider}>
-                <View style={[styles.rule, { backgroundColor: theme.backgroundSelected }]} />
-                <ThemedText type="small" themeColor="textSecondary">or enter it manually</ThemedText>
-                <View style={[styles.rule, { backgroundColor: theme.backgroundSelected }]} />
-              </View>
-
-              <View style={styles.field}>
-                <ThemedText type="smallBold">ISBN-13</ThemedText>
-                <TextInput
-                  accessibilityLabel="ISBN-13"
-                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-                  placeholder="e.g. 9780262033848"
-                  placeholderTextColor={theme.textSecondary}
-                  keyboardType="number-pad"
-                  returnKeyType="search"
-                  value={isbn}
-                  onFocus={() => {
-                    locked.current = false;
-                    setCameraPaused(true);
-                  }}
-                  onChangeText={setIsbn}
-                  onSubmitEditing={() => { void identify(isbn); }}
-                />
-              </View>
-              <PrimaryButton label="Look up book" onPress={() => { void identify(isbn); }} />
-              <TextButton label={`Use offline demo book (${DEMO_ISBN})`} onPress={() => { void identify(DEMO_ISBN); }} />
+                  setCameraPaused(true);
+                }}
+                onChangeText={setIsbn}
+                onSubmitEditing={() => { void identify(isbn); }}
+              />
+              <Button title="Look up ISBN" onPress={() => { void identify(isbn); }} />
+              <Button title="Try a demo book" secondary onPress={() => { void identify(DEMO_ISBN); }} />
+              <Text selectable style={ui.caption}>No book nearby? Demo ISBN: {DEMO_ISBN}. Works offline.</Text>
+              {cameraPaused ? <Button title="Resume camera scanning" secondary onPress={() => {
+                locked.current = false;
+                setCameraPaused(false);
+                setMessage('');
+                Keyboard.dismiss();
+              }} /> : null}
             </>
           ) : null}
 
           {stage === 'loading' ? (
-            <View style={[styles.card, styles.centered, { backgroundColor: theme.backgroundElement }]}>
-              <ActivityIndicator size="large" color={theme.text} accessibilityLabel="Looking up book" />
-              <ThemedText>Looking up ISBN {isbn}…</ThemedText>
-              <SecondaryButton label="Cancel" onPress={reset} />
+            <View style={styles.section}>
+              <ActivityIndicator accessibilityLabel="Looking up book" />
+              <Text style={styles.body}>Looking up ISBN {isbn}…</Text>
+              <Button title="Cancel lookup" onPress={reset} />
             </View>
           ) : null}
 
           {stage === 'manual' ? (
             <View style={styles.section}>
-              <ThemedText type="small" themeColor="textSecondary">ISBN {isbn}</ThemedText>
-              <View style={styles.field}>
-                <ThemedText type="smallBold">Title</ThemedText>
-                <TextInput
-                  accessibilityLabel="Book title"
-                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-                  placeholder="Required"
-                  placeholderTextColor={theme.textSecondary}
-                  value={title}
-                  onChangeText={setTitle}
-                  maxLength={300}
-                />
-              </View>
-              <View style={styles.field}>
-                <ThemedText type="smallBold">Author(s)</ThemedText>
-                <TextInput
-                  accessibilityLabel="Book authors"
-                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-                  placeholder="Optional"
-                  placeholderTextColor={theme.textSecondary}
-                  value={author}
-                  onChangeText={setAuthor}
-                  maxLength={300}
-                />
-              </View>
-              <PrimaryButton label="Review book" onPress={confirmManual} />
-              <SecondaryButton label="Retry Open Library lookup" onPress={() => { void identify(isbn); }} />
+              <Text style={styles.label}>Book details · ISBN {isbn}</Text>
+              <Text style={styles.label}>Title (required)</Text>
+              <TextInput accessibilityLabel="Book title" style={styles.input} value={title} onChangeText={setTitle} maxLength={300} />
+              <Text style={styles.label}>Author(s) (optional)</Text>
+              <TextInput accessibilityLabel="Book authors" style={styles.input} value={author} onChangeText={setAuthor} maxLength={300} />
+              <Button title="Review book" onPress={confirmManual} />
+              <Button title="Retry Open Library lookup" secondary onPress={() => { void identify(isbn); }} />
             </View>
           ) : null}
 
           {stage === 'confirm' && book ? (
             <View style={styles.section}>
-              <ThemedText type="smallBold" themeColor="textSecondary">IS THIS YOUR BOOK?</ThemedText>
-              <View style={[styles.card, styles.bookCard, { backgroundColor: theme.backgroundElement }]}>
-                {book.coverUrl && !coverFailed ? (
-                  <Image
-                    accessibilityLabel={`Cover of ${book.title}`}
-                    source={{ uri: book.coverUrl }}
-                    style={styles.cover}
-                    resizeMode="cover"
-                    onError={() => setCoverFailed(true)}
-                  />
-                ) : (
-                  <View style={[styles.cover, styles.coverPlaceholder, { backgroundColor: theme.backgroundSelected }]}>
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>No cover</ThemedText>
-                  </View>
-                )}
-                <View style={styles.bookInfo}>
-                  <ThemedText style={styles.bookTitle} numberOfLines={4}>{book.title}</ThemedText>
-                  <ThemedText themeColor="textSecondary" numberOfLines={2}>
-                    {book.authors.join(', ') || 'Author not provided'}
-                  </ThemedText>
-                  <ThemedText selectable type="small" themeColor="textSecondary">ISBN {book.isbn}</ThemedText>
-                  <View style={[styles.badge, { backgroundColor: theme.background }]}>
-                    <ThemedText type="small" themeColor="textSecondary">{sourceLabel}</ThemedText>
-                  </View>
-                </View>
-              </View>
-              <PrimaryButton label="Yes, continue" onPress={continueToSelling} />
-              {SELLING_ROUTE === null ? (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
-                  Selling integration is pending; confirmation keeps this book in local memory.
-                </ThemedText>
-              ) : null}
+              <Text style={styles.label}>Is this your book?</Text>
+              <BookPreview key={book.isbn} book={book} />
+              <Text style={styles.body}>
+                {book.source === 'demo' ? 'Offline demo metadata'
+                  : book.source === 'manual' ? 'Manually entered metadata'
+                  : 'Metadata from Open Library'}
+              </Text>
+              <Button title="Confirm book & continue" onPress={continueToSelling} />
             </View>
           ) : null}
-          {stage === 'manual' || stage === 'confirm' ? <TextButton label="Scan a different book" onPress={reset} /> : null}
+          {stage === 'manual' || stage === 'confirm' ? <Button title="Scan another book" secondary onPress={reset} /> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-/** Light-on-dark button used inside the camera panel. */
-function CameraButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.cameraButton, pressed && styles.pressed]}>
-      <Text style={styles.cameraButtonText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-/** Lowest-emphasis action: plain tappable text with a 44pt target. */
-function TextButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
-      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.underline}>{label}</ThemedText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  content: {
-    padding: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.five,
-    gap: Spacing.three,
-    maxWidth: 600,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  header: { gap: Spacing.one, marginBottom: Spacing.two },
-  heading: { fontSize: 28, lineHeight: 34, fontWeight: 700 },
-  notice: { padding: Spacing.three, borderRadius: 12, backgroundColor: '#FFF4D6' },
-  noticeText: { color: '#5C3D00', fontSize: 14, lineHeight: 20, fontWeight: 500 },
-  camera: { height: 280, borderRadius: Spacing.four, overflow: 'hidden', backgroundColor: '#14171C' },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.four,
-  },
-  guide: { width: '88%', height: 120, borderColor: '#ffffff', borderWidth: 3, borderRadius: 12 },
-  cameraPill: {
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: 999,
-  },
-  cameraText: { color: '#ffffff', textAlign: 'center', fontSize: 14, lineHeight: 20, fontWeight: 500 },
-  cameraPlaceholder: { flex: 1, padding: Spacing.four, justifyContent: 'center', alignItems: 'center', gap: Spacing.three },
-  cameraButton: {
-    minHeight: 44,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cameraButtonText: { color: '#14171C', fontSize: 14, fontWeight: 700 },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, marginVertical: Spacing.two },
-  rule: { flex: 1, height: 1 },
-  field: { gap: Spacing.two },
-  input: { borderRadius: 12, paddingHorizontal: Spacing.three, minHeight: 52, fontSize: 17 },
-  section: { gap: Spacing.three },
-  card: { borderRadius: Spacing.four, padding: Spacing.four },
-  centered: { alignItems: 'center', gap: Spacing.three },
-  bookCard: { flexDirection: 'row', gap: Spacing.three, padding: Spacing.three },
-  cover: { width: 104, height: 156, borderRadius: Spacing.two },
-  coverPlaceholder: { justifyContent: 'center', alignItems: 'center', padding: Spacing.two },
-  bookInfo: { flex: 1, gap: Spacing.two },
-  bookTitle: { fontSize: 20, lineHeight: 26, fontWeight: 700 },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: Spacing.two, paddingVertical: Spacing.one, borderRadius: Spacing.two },
-  centerText: { textAlign: 'center' },
-  textButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  underline: { textDecorationLine: 'underline' },
-  pressed: { opacity: 0.7 },
+  safe: ui.page,
+  content: ui.content,
+  brand: { color: palette.accentText, fontWeight: '700', fontSize: 17, letterSpacing: -0.4 },
+  heading: ui.heading,
+  title: ui.title,
+  body: ui.body,
+  label: ui.label,
+  notice: { padding: 12, backgroundColor: '#fff3d6', color: '#593b00', fontSize: 16 },
+  input: ui.input,
+  camera: { borderRadius: 20, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: '#182C50' },
+  overlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 20 },
+  guide: { width: '90%', height: 110, borderColor: '#fff', borderWidth: 3, borderRadius: 8 },
+  cameraText: { color: '#fff', textAlign: 'center', fontSize: 16, backgroundColor: '#17212f', padding: 6 },
+  cameraPlaceholder: { padding: 16, justifyContent: 'center', gap: 12 },
+  section: { gap: 14 },
 });

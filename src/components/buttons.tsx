@@ -1,8 +1,9 @@
 import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { palette, ui } from "@/components/book-flow/ui";
 
 export function PrimaryButton({
   label,
@@ -18,7 +19,6 @@ export function PrimaryButton({
   /** Read by screen readers while loading. */
   loadingLabel?: string;
 }) {
-  const theme = useTheme();
   const inactive = disabled || loading;
   return (
     <Pressable
@@ -29,16 +29,16 @@ export function PrimaryButton({
       accessibilityLabel={loading ? loadingLabel : label}
       style={({ pressed }) => [
         styles.primary,
-        { backgroundColor: disabled ? theme.backgroundSelected : theme.text },
+        { backgroundColor: disabled ? palette.soft : palette.blue },
         pressed && styles.pressed,
       ]}>
       {loading ? (
-        <ActivityIndicator color={theme.background} />
+        <ActivityIndicator color="#FFFFFF" />
       ) : (
         <ThemedText
           style={[
             styles.primaryText,
-            { color: disabled ? theme.textSecondary : theme.background },
+            { color: disabled ? palette.muted : "#FFFFFF" },
           ]}>
           {label}
         </ThemedText>
@@ -76,13 +76,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primary: {
-    width: "100%",
-    maxWidth: MaxContentWidth,
+    ...ui.button,
+    maxWidth: 560,
     alignSelf: "center",
-    minHeight: 52,
-    borderRadius: Spacing.three,
-    alignItems: "center",
-    justifyContent: "center",
   },
   primaryText: {
     fontSize: 17,

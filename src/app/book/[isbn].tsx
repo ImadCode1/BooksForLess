@@ -15,6 +15,8 @@ import {
 } from "@/data/books";
 import { useTheme } from "@/hooks/use-theme";
 import { useOffers } from "@/services/inventory";
+import { ActionButton, palette, ui } from "@/components/book-flow/ui";
+import { CoverPlaceholder } from "@/components/book-flow/cover-placeholder";
 
 export default function BookDetailsScreen() {
   const { isbn } = useLocalSearchParams<{ isbn: string }>();
@@ -25,6 +27,7 @@ export default function BookDetailsScreen() {
   // Shared stock, so a purchase on the payment page shows up here.
   const offers = useOffers(book?.isbn);
   const [chosen, setChosen] = useState<BookCondition>();
+  const [coverFailed, setCoverFailed] = useState(false);
 
   if (!book) {
     return (
@@ -34,16 +37,7 @@ export default function BookDetailsScreen() {
         <ThemedText themeColor="textSecondary" style={styles.centerText}>
           No book matches the ISBN “{isbn}”.
         </ThemedText>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.backButton,
-            { backgroundColor: theme.backgroundElement },
-            pressed && styles.pressed,
-          ]}>
-          <ThemedText type="smallBold">Go back</ThemedText>
-        </Pressable>
+        <ActionButton title="Browse books" onPress={() => router.replace("/")} />
       </ThemedView>
     );
   }
@@ -75,7 +69,7 @@ export default function BookDetailsScreen() {
 
   const canBuy = !!selectedOffer && selectedOffer.quantity > 0;
   const buyLabel = canBuy
-    ? `Buy · ${formatPrice(selectedOffer.price)}`
+    ? `Continue to demo checkout`
     : "Not available";
 
   return (
@@ -93,17 +87,16 @@ export default function BookDetailsScreen() {
         <View style={styles.hero}>
           <View style={[styles.coverShadow, { shadowColor: theme.text }]}>
             <ThemedView type="backgroundElement" style={styles.cover}>
-              {book.coverUrl ? (
+              {book.coverUrl && !coverFailed ? (
                 <Image
                   source={book.coverUrl}
                   style={StyleSheet.absoluteFill}
-                  contentFit="cover"
+                  contentFit="contain"
+                  onError={() => setCoverFailed(true)}
                   accessibilityLabel={`Cover of ${book.title}`}
                 />
               ) : (
-                <ThemedText style={styles.initials} themeColor="textSecondary">
-                  {getInitials(book.title)}
-                </ThemedText>
+                <CoverPlaceholder />
               )}
             </ThemedView>
           </View>
@@ -197,35 +190,13 @@ export default function BookDetailsScreen() {
         style={[
           styles.footer,
           {
-            borderTopColor: theme.backgroundSelected,
+            borderTopColor: palette.line,
             paddingBottom: insets.bottom + Spacing.three,
           },
         ]}>
-        <Pressable
-          onPress={handleBuy}
-          disabled={!canBuy}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canBuy }}
-          accessibilityLabel={
-            canBuy
-              ? `Buy ${selectedOffer.condition} copy for ${formatPrice(selectedOffer.price)}`
-              : "Not available"
-          }
-          style={({ pressed }) => [
-            styles.buyButton,
-            {
-              backgroundColor: canBuy ? theme.text : theme.backgroundSelected,
-            },
-            pressed && styles.pressed,
-          ]}>
-          <ThemedText
-            style={[
-              styles.buyText,
-              { color: canBuy ? theme.background : theme.textSecondary },
-            ]}>
-            {buyLabel}
-          </ThemedText>
-        </Pressable>
+        <View style={{ width: "100%", maxWidth: 560, alignSelf: "center" }}>
+          <ActionButton title={buyLabel} onPress={handleBuy} disabled={!canBuy} />
+        </View>
       </ThemedView>
     </ThemedView>
   );
@@ -256,12 +227,12 @@ function QualityOption({
         type={selected ? "backgroundSelected" : "backgroundElement"}
         style={[
           styles.option,
-          { borderColor: selected ? theme.text : "transparent" },
+          { borderColor: selected ? palette.accentText : "transparent" },
           !inStock && styles.optionDisabled,
         ]}>
         <View style={[styles.radio, { borderColor: theme.textSecondary }]}>
           {selected && (
-            <View style={[styles.radioDot, { backgroundColor: theme.text }]} />
+             <View style={[styles.radioDot, { backgroundColor: palette.accentText }]} />
           )}
         </View>
         <View style={styles.optionText}>
@@ -295,15 +266,6 @@ function formatCopies(count: number): string {
   return `${count} ${count === 1 ? "copy" : "copies"}`;
 }
 
-function getInitials(title: string): string {
-  return title
-    .split(/\s+/)
-    .filter((word) => /^[A-Za-z]/.test(word))
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join("");
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -316,11 +278,7 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
   },
   content: {
-    padding: Spacing.four,
-    gap: Spacing.four,
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    alignSelf: "center",
+    ...ui.content,
   },
   hero: {
     flexDirection: "row",
@@ -383,6 +341,7 @@ const styles = StyleSheet.create({
   },
   priceRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: Spacing.two,
   },
@@ -390,6 +349,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
     fontWeight: 700,
+    fontVariant: ["tabular-nums"],
   },
   originalPrice: {
     textDecorationLine: "line-through",
@@ -419,6 +379,8 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Spacing.three,
     borderWidth: 1,
+    flexWrap: "wrap",
+    minHeight: 64,
   },
   optionDisabled: {
     opacity: 0.5,
@@ -464,11 +426,13 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   card: {
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    ...ui.card,
+    gap: 0,
   },
   detailRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     justifyContent: "space-between",
     paddingVertical: Spacing.three,
   },

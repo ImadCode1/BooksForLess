@@ -26,6 +26,7 @@ const { isValidIsbn13, normalizeIsbn } = load('src/utils/isbn.ts');
 const { DEMO_BOOKS, DEMO_ISBN } = load('src/data/demo-books.ts');
 const { lookupBook } = load('src/services/books.ts');
 const { prepareSellingBook, getPendingSellingBook } = load('src/services/selling-handoff.ts');
+const { parseCadPrice, formatCad, createLocalTicket, ticketQrValue } = load('src/utils/tickets.ts');
 
 test('ISBN-13 validates checksum, prefix, length, and permitted formatting', () => {
   assert.equal(normalizeIsbn('978-0 262033848'), DEMO_ISBN);
@@ -115,4 +116,39 @@ test('Selling handoff preserves metadata without sharing mutable arrays', () => 
   assert.deepEqual(pending.authors, DEMO_BOOKS[0].authors);
   pending.authors.push('Also changed');
   assert.deepEqual(getPendingSellingBook().authors, DEMO_BOOKS[0].authors);
+});
+
+test('asking prices parse exactly as CAD cents, including decimal commas', () => {
+  for (const [value, expected] of [
+    ['25', 2500], ['25.5', 2550], ['25,50', 2550], [' 0.01 ', 1], ['9999.99', 999999],
+  ]) assert.equal(parseCadPrice(value), expected);
+  for (const value of ['', '0', '0.00', '-10', 'Infinity', '1e3', '10000', '10.123', '$25', '1,234.56']) {
+    assert.equal(parseCadPrice(value), null, value);
+  }
+  assert.equal(formatCad(2550), '$25.50 CAD');
+});
+
+test('local tickets retain condition, photo and price with unique stable QR identities', () => {
+  const draft = { book: DEMO_BOOKS[0], condition: 'Good', priceCents: 2500, photoUri: 'file:///book.jpg' };
+  const ticket = createLocalTicket(draft);
+  const second = createLocalTicket(draft);
+  assert.notEqual(ticket.id, second.id);
+  assert.equal(ticket.priceCents, 2500);
+  assert.equal(ticket.condition, 'Good');
+  assert.equal(ticket.photoUri, draft.photoUri);
+  assert.equal(ticket.status, 'Awaiting drop-off');
+  assert.equal(ticketQrValue(ticket), `booksforless:ticket:${ticket.id}`);
+  assert.equal(ticketQrValue(ticket), ticketQrValue(ticket));
+  assert.notEqual(ticket.book.authors, draft.book.authors);
+  const qr = require('qrcode').create(ticketQrValue(ticket));
+  assert.ok(qr.modules.size >= 21);
+});
+
+test('invalid ticket drafts cannot create a QR ticket', () => {
+  const draft = { book: DEMO_BOOKS[0], condition: 'Good', priceCents: 2500, photoUri: 'file:///book.jpg' };
+  for (const changes of [
+    { photoUri: '' }, { condition: 'Unknown' }, { priceCents: 0 },
+    { priceCents: 0.5 }, { priceCents: NaN }, { priceCents: 1000000 },
+    { book: { ...draft.book, title: '' } },
+  ]) assert.throws(() => createLocalTicket({ ...draft, ...changes }), /required/);
 });

@@ -3,8 +3,9 @@ import type { Href } from 'expo-router';
 import type { BookMetadata } from '@/types/book-metadata';
 
 /**
- * Selling is not implemented in this checkout. Set to its agreed Expo Router
- * route (e.g. '/selling') once available. Do not navigate to a nonexistent page.
+ * Reserved for the Selling teammate's agreed Expo Router route.
+ * The scanner currently runs BookPreparation locally; wiring this route into
+ * navigation is an explicit future integration, not enabled by this constant.
  */
 export const SELLING_ROUTE: Href | null = null;
 

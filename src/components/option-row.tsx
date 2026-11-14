@@ -4,6 +4,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { palette } from "@/components/book-flow/ui";
 
 /** A selectable radio row. Wrap a group in a View with accessibilityRole="radiogroup". */
 export function OptionRow({
@@ -31,9 +32,9 @@ export function OptionRow({
       style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView
         type={selected ? "backgroundSelected" : "backgroundElement"}
-        style={[styles.option, { borderColor: selected ? theme.text : "transparent" }]}>
+        style={[styles.option, { borderColor: selected ? palette.accentText : "transparent" }]}>
         <View style={[styles.radio, { borderColor: theme.textSecondary }]}>
-          {selected && <View style={[styles.radioDot, { backgroundColor: theme.text }]} />}
+          {selected && <View style={[styles.radioDot, { backgroundColor: palette.accentText }]} />}
         </View>
         <View style={styles.text}>
           <ThemedText type="smallBold">{title}</ThemedText>
@@ -58,6 +59,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   option: {
+    minHeight: 64,
+    flexWrap: "wrap",
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.three,

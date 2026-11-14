@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { StyleSheet, Switch, View } from "react-native";
+import { StyleSheet, Switch, View, useWindowDimensions } from "react-native";
+import { palette } from "@/components/book-flow/ui";
 
 import { LabeledInput } from "@/components/labeled-input";
 import { ThemedText } from "@/components/themed-text";
@@ -62,6 +63,7 @@ export function CardForm({
   showSaveToggle?: boolean;
 }) {
   const theme = useTheme();
+  const { fontScale } = useWindowDimensions();
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
   const errors = fieldErrors(value);
   const brand = detectBrand(value.number);
@@ -95,7 +97,7 @@ export function CardForm({
         keyboardType="number-pad"
         placeholder="1234 5678 9012 3456"
       />
-      <View style={styles.row}>
+      <View style={[styles.row, fontScale > 1.3 && { flexDirection: "column" }]}>
         <View style={styles.flex}>
           <LabeledInput
             label="Expiry"
@@ -125,13 +127,13 @@ export function CardForm({
       {showSaveToggle && (
         <View style={styles.saveRow}>
           <ThemedText type="small" style={styles.flex}>
-            Save this card for next time
+            Remember this test card for this session
           </ThemedText>
           <Switch
             value={value.save}
             onValueChange={(save) => update({ save })}
-            trackColor={{ true: theme.success, false: theme.backgroundSelected }}
-            accessibilityLabel="Save this card for next time"
+            trackColor={{ true: palette.blue, false: theme.backgroundSelected }}
+            accessibilityLabel="Remember this test card for this session"
           />
         </View>
       )}

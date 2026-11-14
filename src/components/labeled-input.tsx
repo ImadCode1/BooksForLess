@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, type TextInputProps, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { palette, ui } from "@/components/book-flow/ui";
 
 export function LabeledInput({
   label,
@@ -22,9 +23,9 @@ export function LabeledInput({
         style={[
           styles.input,
           {
-            color: theme.text,
-            backgroundColor: theme.backgroundElement,
-            borderColor: error ? theme.danger : theme.backgroundSelected,
+            color: palette.ink,
+            backgroundColor: palette.paper,
+            borderColor: error ? theme.danger : palette.inputBorder,
           },
         ]}
       />
@@ -42,10 +43,6 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    fontSize: 16,
+    ...ui.input,
   },
 });
