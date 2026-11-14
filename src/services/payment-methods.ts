@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 
+import { DEMO_ACCOUNT } from "@/data/demo-account";
 import { type CardBrand, detectBrand, digitsOnly, parseExpiry } from "@/utils/card";
 
 /**
@@ -22,8 +23,18 @@ export type NewCardInput = {
   holderName: string;
 };
 
-// In-memory only: saved cards are lost when the app restarts.
-let cards: SavedCard[] = [];
+/** Demo card on the default account, so checkout works right away. Not a real card. */
+export const DEFAULT_CARD: SavedCard = {
+  id: "card_demo_default",
+  brand: "Visa",
+  last4: "4242",
+  expMonth: 12,
+  expYear: 2029,
+  holderName: DEMO_ACCOUNT.name,
+};
+
+// In-memory only: cards added during a session are lost when the app restarts.
+let cards: SavedCard[] = [DEFAULT_CARD];
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {

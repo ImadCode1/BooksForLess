@@ -2,12 +2,6 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  AddressForm,
-  type AddressFormValue,
-  EMPTY_ADDRESS_FORM,
-  isAddressFormValid,
-} from "@/components/address-form";
 import { PrimaryButton, SecondaryButton } from "@/components/buttons";
 import {
   CardForm,
@@ -15,21 +9,15 @@ import {
   EMPTY_CARD_FORM,
   isCardFormValid,
 } from "@/components/card-form";
-import { OptionRow } from "@/components/option-row";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { ui } from "@/components/book-flow/ui";
 import { formatPrice } from "@/data/books";
-import {
-  formatAddressLine,
-  saveAddress,
-  setDefaultAddress,
-  toAddress,
-  useAddresses,
-} from "@/services/addresses";
+import { DEMO_ACCOUNT } from "@/data/demo-account";
 import { useOrders } from "@/services/orders";
 import {
+  DEFAULT_CARD,
   describeCard,
   formatCardExpiry,
   saveCard,
@@ -53,19 +41,24 @@ export default function ProfileScreen() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled">
             <Text accessibilityRole="header" style={ui.heading}>Profile</Text>
-            {/* TODO: show the signed-in user once accounts exist. */}
+            {/* Built-in demo account; there is no sign-in. */}
             <ThemedView type="backgroundElement" style={styles.userCard}>
               <View style={styles.avatar}>
                 <ThemedText style={styles.avatarText}>👤</ThemedText>
               </View>
               <View style={styles.flex}>
-                <ThemedText type="smallBold">Guest</ThemedText>
+                <ThemedText type="smallBold">{DEMO_ACCOUNT.name}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {DEMO_ACCOUNT.email}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Demo account · {DEMO_ACCOUNT.school}
+                </ThemedText>
               </View>
             </ThemedView>
 
             <OrdersSection />
             <PaymentMethodsSection />
-            <AddressesSection />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -95,10 +88,6 @@ function OrdersSection() {
             <ThemedText type="small" themeColor="textSecondary">
               {order.condition} · {order.createdAt.toLocaleDateString()} ·{" "}
               {order.paymentMethod}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Ships to {order.shippingAddress.fullName},{" "}
-              {formatAddressLine(order.shippingAddress)}
             </ThemedText>
           </ThemedView>
         ))
@@ -146,7 +135,7 @@ function PaymentMethodsSection() {
             {describeCard(card)}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Expires {formatCardExpiry(card)}
+            {card.id === DEFAULT_CARD.id ? "Default · " : ""}Expires {formatCardExpiry(card)}
           </ThemedText>
         </ThemedView>
       ))}
@@ -165,73 +154,6 @@ function PaymentMethodsSection() {
         </ThemedView>
       ) : (
         <SecondaryButton label="+ Add payment method" onPress={() => setAdding(true)} />
-      )}
-    </View>
-  );
-}
-
-function AddressesSection() {
-  const { addresses, defaultId } = useAddresses();
-  const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState<AddressFormValue>(EMPTY_ADDRESS_FORM);
-  const [showAllErrors, setShowAllErrors] = useState(false);
-
-  function close() {
-    setAdding(false);
-    setForm(EMPTY_ADDRESS_FORM);
-    setShowAllErrors(false);
-  }
-
-  function handleSave() {
-    if (!isAddressFormValid(form)) {
-      setShowAllErrors(true);
-      return;
-    }
-    saveAddress(toAddress(form));
-    close();
-  }
-
-  return (
-    <View style={styles.section}>
-      <ThemedText type="smallBold">Addresses</ThemedText>
-      {addresses.length === 0 && !adding ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          No saved addresses yet.
-        </ThemedText>
-      ) : (
-        addresses.length > 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            Choose your default address. It&apos;s selected automatically at checkout.
-          </ThemedText>
-        )
-      )}
-      <View style={styles.section} accessibilityRole="radiogroup">
-        {addresses.map((address) => (
-          <OptionRow
-            key={address.id}
-            title={address.fullName}
-            subtitle={formatAddressLine(address)}
-            badge={address.id === defaultId ? "Default" : undefined}
-            selected={address.id === defaultId}
-            onSelect={() => setDefaultAddress(address.id)}
-          />
-        ))}
-      </View>
-
-      {adding ? (
-        <ThemedView type="backgroundElement" style={styles.formCard}>
-          <ThemedText type="smallBold">New address</ThemedText>
-          <AddressForm
-            value={form}
-            onChange={setForm}
-            showAllErrors={showAllErrors}
-            showSaveToggle={false}
-          />
-          <PrimaryButton label="Save address" onPress={handleSave} />
-          <SecondaryButton label="Cancel" onPress={close} />
-        </ThemedView>
-      ) : (
-        <SecondaryButton label="+ Add address" onPress={() => setAdding(true)} />
       )}
     </View>
   );

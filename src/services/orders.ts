@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from "react";
 
 import type { BookCondition } from "@/data/books";
-import type { Address } from "@/services/addresses";
 
 export type Order = {
   id: string;
@@ -10,8 +9,6 @@ export type Order = {
   condition: BookCondition;
   price: number;
   paymentMethod: string;
-  /** Copy of the address at the time of the order. */
-  shippingAddress: Address;
   createdAt: Date;
 };
 
@@ -34,7 +31,6 @@ function getOrders(): Order[] {
 export function addOrder(order: Omit<Order, "id" | "createdAt">): Order {
   const created: Order = {
     ...order,
-    shippingAddress: { ...order.shippingAddress },
     id: `order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     createdAt: new Date(),
   };

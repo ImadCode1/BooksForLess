@@ -3,21 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
-  type ScrollViewInstance,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  AddressForm,
-  type AddressFormValue,
-  EMPTY_ADDRESS_FORM,
-  isAddressFormValid,
-} from "@/components/address-form";
 import { PrimaryButton } from "@/components/buttons";
 import {
   CardForm,
@@ -32,16 +23,10 @@ import { ActionButton, palette, ui } from "@/components/book-flow/ui";
 import { Spacing } from "@/constants/theme";
 import { type BookCondition, formatPrice, getBookByIsbn } from "@/data/books";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  type Address,
-  formatAddressLine,
-  saveAddress,
-  toAddress,
-  useAddresses,
-} from "@/services/addresses";
 import { purchaseCopy, useOffers } from "@/services/inventory";
 import { addOrder } from "@/services/orders";
 import {
+  DEFAULT_CARD,
   describeCard,
   formatCardExpiry,
   saveCard,
@@ -55,10 +40,6 @@ type PaymentChoice =
   | { kind: "saved"; cardId: string }
   | { kind: "new-card" }
   | { kind: "wallet"; wallet: Wallet };
-
-type AddressChoice = { kind: "saved"; addressId: string } | { kind: "new" };
-
-type Step = "payment" | "address";
 
 const WALLET_LABELS: Record<Wallet, string> = {
   "apple-pay": "Apple Pay",
@@ -84,25 +65,16 @@ export default function CheckoutScreen() {
   const book = getBookByIsbn(isbn);
   const offer = useOffers(book?.isbn).find((item) => item.condition === condition);
   const cards = useSavedCards();
-  const { addresses, defaultId } = useAddresses();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
-  const [step, setStep] = useState<Step>("payment");
   const [chosenPayment, setChosenPayment] = useState<PaymentChoice>();
   const [cardForm, setCardForm] = useState<CardFormValue>(EMPTY_CARD_FORM);
-  const [chosenAddress, setChosenAddress] = useState<AddressChoice>();
-  const [addressForm, setAddressForm] = useState<AddressFormValue>(EMPTY_ADDRESS_FORM);
   const [showAllErrors, setShowAllErrors] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>();
-  const [receipt, setReceipt] = useState<{
-    amount: number;
-    method: string;
-    address: Address;
-  }>();
+  const [receipt, setReceipt] = useState<{ amount: number; method: string }>();
 
-  const scrollRef = useRef<ScrollViewInstance>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -135,9 +107,6 @@ export default function CheckoutScreen() {
           You bought {book.title} ({offer.condition}) for {formatPrice(receipt.amount)}{" "}
           with {receipt.method}.
         </ThemedText>
-        <ThemedText themeColor="textSecondary" style={styles.textCenter}>
-          Delivery address: {receipt.address.fullName}, {formatAddressLine(receipt.address)}.
-        </ThemedText>
         <PrimaryButton label="Back to book" onPress={() => router.back()} />
       </ThemedView>
     );
@@ -163,40 +132,13 @@ export default function CheckoutScreen() {
     return WALLET_LABELS[payment.wallet];
   }
 
-  // ----- Address choice -----
-  const hasSavedAddresses = addresses.length > 0;
-  const fallbackAddressId = defaultId ?? addresses[0]?.id;
-  const address: AddressChoice =
-    !hasSavedAddresses || !fallbackAddressId
-      ? { kind: "new" }
-      : (chosenAddress ?? { kind: "saved", addressId: fallbackAddressId });
-  // Default address first.
-  const orderedAddresses = [...addresses].sort(
-    (a, b) => Number(b.id === defaultId) - Number(a.id === defaultId),
-  );
-
   const inStock = offer.quantity > 0;
-
-  function goToStep(next: Step) {
-    setShowAllErrors(false);
-    setError(undefined);
-    setStep(next);
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }
-
-  function handleContinue() {
-    if (payment.kind === "new-card" && !isCardFormValid(cardForm)) {
-      setShowAllErrors(true);
-      return;
-    }
-    goToStep("address");
-  }
 
   function handlePay() {
     if (!book || !offer || processing) return;
     setError(undefined);
 
-    if (address.kind === "new" && !isAddressFormValid(addressForm)) {
+    if (payment.kind === "new-card" && !isCardFormValid(cardForm)) {
       setShowAllErrors(true);
       return;
     }
@@ -204,20 +146,6 @@ export default function CheckoutScreen() {
     // Resolve the payment method, saving a new card if asked to.
     const method = paymentLabel();
     if (payment.kind === "new-card" && cardForm.save) saveCard(toSavedCard(cardForm));
-
-    // Resolve the address, saving a new one if asked to.
-    let shippingAddress: Address | undefined;
-    if (address.kind === "new") {
-      shippingAddress = toAddress(addressForm);
-      if (addressForm.save) saveAddress(shippingAddress);
-    } else {
-      shippingAddress = addresses.find((a) => a.id === address.addressId);
-    }
-    if (!shippingAddress) {
-      setError("Please choose a delivery address.");
-      return;
-    }
-    const shipTo = shippingAddress;
 
     // TODO: charge through a real payment provider instead of simulating it.
     setProcessing(true);
@@ -231,9 +159,8 @@ export default function CheckoutScreen() {
           condition: offer.condition,
           price: amount,
           paymentMethod: method,
-          shippingAddress: shipTo,
         });
-        setReceipt({ amount, method, address: shipTo });
+        setReceipt({ amount, method });
       } else {
         setError("Sorry, this copy just sold out. You have not been charged.");
       }
@@ -246,35 +173,11 @@ export default function CheckoutScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
       <ThemedView style={styles.flex}>
-        <Stack.Screen options={{ title: step === "payment" ? "Payment" : "Delivery" }} />
+        <Stack.Screen options={{ title: "Payment" }} />
         <ScrollView
-          ref={scrollRef}
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled">
-          {/* Same step indicator as the onboarding: pill-shaped blue dot for the
-              current step, small grey dots for the others. */}
-          <View
-            style={styles.stepRow}
-            accessible
-            accessibilityLabel={`Step ${step === "payment" ? 1 : 2} of 2: ${
-              step === "payment" ? "Payment method" : "Delivery address"
-            }`}>
-            <View style={styles.dots}>
-              {(["payment", "address"] as const).map((name) => (
-                <View
-                  key={name}
-                  style={[styles.dot, name === step && styles.selectedDot]}
-                />
-              ))}
-            </View>
-            <Text style={ui.caption}>
-              Step {step === "payment" ? 1 : 2} of 2 ·{" "}
-              <Text style={styles.stepName}>
-                {step === "payment" ? "Payment method" : "Delivery address"}
-              </Text>
-            </Text>
-          </View>
           <ThemedView type="backgroundElement" style={styles.summary}>
             <View style={styles.flex}>
               <ThemedText type="smallBold">{book.title}</ThemedText>
@@ -293,8 +196,7 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {step === "payment" ? (
-            hasSavedCards ? (
+          {hasSavedCards ? (
               <>
                 <View style={styles.section} accessibilityRole="radiogroup">
                   <ThemedText type="smallBold">Pay with a saved card</ThemedText>
@@ -303,6 +205,7 @@ export default function CheckoutScreen() {
                       key={card.id}
                       title={describeCard(card)}
                       subtitle={`${card.holderName} · Expires ${formatCardExpiry(card)}`}
+                      badge={card.id === DEFAULT_CARD.id ? "Default" : undefined}
                       selected={isPaymentChosen({ kind: "saved", cardId: card.id })}
                       onSelect={() => setChosenPayment({ kind: "saved", cardId: card.id })}
                     />
@@ -345,65 +248,10 @@ export default function CheckoutScreen() {
                   showAllErrors={showAllErrors}
                 />
               </View>
-            )
-          ) : (
-            <>
-              <ThemedView type="backgroundElement" style={styles.summary}>
-                <View style={styles.flex}>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Paying with
-                  </ThemedText>
-                  <ThemedText type="smallBold">{paymentLabel()}</ThemedText>
-                </View>
-                <Pressable
-                  onPress={() => goToStep("payment")}
-                  accessibilityRole="button"
-                  accessibilityLabel="Change payment method"
-                  hitSlop={8}>
-                  <ThemedText type="linkPrimary">Change</ThemedText>
-                </Pressable>
-              </ThemedView>
-
-              {hasSavedAddresses ? (
-                <View style={styles.section} accessibilityRole="radiogroup">
-                  <ThemedText type="smallBold">Deliver to</ThemedText>
-                  {orderedAddresses.map((a) => (
-                    <OptionRow
-                      key={a.id}
-                      title={a.fullName}
-                      subtitle={formatAddressLine(a)}
-                      badge={a.id === defaultId ? "Default" : undefined}
-                      selected={address.kind === "saved" && address.addressId === a.id}
-                      onSelect={() => setChosenAddress({ kind: "saved", addressId: a.id })}
-                    />
-                  ))}
-                  <OptionRow
-                    title="New address"
-                    selected={address.kind === "new"}
-                    onSelect={() => setChosenAddress({ kind: "new" })}
-                  />
-                  {address.kind === "new" && (
-                    <AddressForm
-                      value={addressForm}
-                      onChange={setAddressForm}
-                      showAllErrors={showAllErrors}
-                    />
-                  )}
-                </View>
-              ) : (
-                <View style={styles.section}>
-                  <ThemedText type="subtitle" style={styles.sectionTitle}>
-                    Add a delivery address
-                  </ThemedText>
-                  <AddressForm
-                    value={addressForm}
-                    onChange={setAddressForm}
-                    showAllErrors={showAllErrors}
-                  />
-                </View>
-              )}
-            </>
-          )}
+            )}
+          <ThemedText type="small" themeColor="textSecondary" style={styles.textCenter}>
+            Demo checkout: no real payment is made.
+          </ThemedText>
         </ScrollView>
 
         <ThemedView
@@ -416,8 +264,6 @@ export default function CheckoutScreen() {
           ]}>
           {!inStock ? (
             <PrimaryButton label="Sold out" onPress={() => {}} disabled />
-          ) : step === "payment" ? (
-            <PrimaryButton label="Continue" onPress={handleContinue} />
           ) : (
             <PrimaryButton
               label={`Pay ${formatPrice(offer.price)}`}
@@ -461,15 +307,6 @@ const styles = StyleSheet.create({
   content: {
     ...ui.content,
   },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-  },
-  dots: { flexDirection: "row", gap: 7, alignItems: "center" },
-  dot: { height: 6, width: 6, borderRadius: 3, backgroundColor: "#BCCBE7" },
-  selectedDot: { width: 26, backgroundColor: palette.blue },
-  stepName: { color: palette.accentText, fontWeight: "700" },
   summary: {
     ...ui.card,
     flexDirection: "row",

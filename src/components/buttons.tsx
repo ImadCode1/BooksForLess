@@ -47,7 +47,7 @@ export function PrimaryButton({
   );
 }
 
-/** Low-emphasis outlined button, e.g. "Add address" or "Cancel". */
+/** Low-emphasis outlined button, e.g. "Add payment method" or "Cancel". */
 export function SecondaryButton({
   label,
   onPress,
