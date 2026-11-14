@@ -4,8 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cd103863-535d-441a-a817-753de7814b08" name="Changes" comment="Initial commit">
+    <list default="true" id="cd103863-535d-441a-a817-753de7814b08" name="Changes" comment="Updated AGENTS.md">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/app-tabs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/app-tabs.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/app-tabs.web.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/app-tabs.web.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,6 +39,65 @@
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0896173150095403" />
+      <entry key="MS500" value="3.18654122013314" />
+      <entry key="S2" value="5.862554538603343" />
+      <entry key="S5" value="9.107526859058954" />
+      <entry key="S10" value="12.805358498674336" />
+      <entry key="S30" value="17.599549805767936" />
+      <entry key="S60" value="20.478419289281895" />
+      <entry key="M2" value="25.13468480074407" />
+      <entry key="M5" value="32.81296390538516" />
+      <entry key="M10" value="37.68407497719317" />
+      <entry key="M15" value="39.78516794533327" />
+      <entry key="M30" value="42.20282300381765" />
+      <entry key="H1" value="43.54950376823023" />
+      <entry key="H2" value="44.26116402096574" />
+      <entry key="H4" value="44.62710511796821" />
+      <entry key="D1" value="44.93736099455096" />
+      <entry key="W1" value="44.991039482213694" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="1.8888767127140984E-90" />
+      <entry key="S5" value="1.2896784557510158E-36" />
+      <entry key="S10" value="1.1356401083754552E-18" />
+      <entry key="S30" value="1.0433104903029415E-6" />
+      <entry key="S60" value="0.0010214257145299119" />
+      <entry key="M2" value="0.031959751477912204" />
+      <entry key="M5" value="0.25225591434517936" />
+      <entry key="M10" value="0.5022508480283332" />
+      <entry key="M15" value="0.631849703172211" />
+      <entry key="M30" value="0.7948897427770798" />
+      <entry key="H1" value="0.8915658936820541" />
+      <entry key="H2" value="0.9442276704704501" />
+      <entry key="H4" value="0.9717137801176071" />
+      <entry key="D1" value="0.9952290866708153" />
+      <entry key="W1" value="0.9993170432548976" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.3722671906486606" />
+      <entry key="MS500" value="2.942299521711175" />
+      <entry key="S2" value="5.788727601836162" />
+      <entry key="S5" value="9.073983447328304" />
+      <entry key="S10" value="12.786503927267301" />
+      <entry key="S30" value="17.59222816888647" />
+      <entry key="S60" value="20.474589485681882" />
+      <entry key="M2" value="25.16258892084923" />
+      <entry key="M5" value="33.06225225011148" />
+      <entry key="M10" value="38.18435513179753" />
+      <entry key="M15" value="40.41555649454732" />
+      <entry key="M30" value="42.99689508631388" />
+      <entry key="H1" value="44.440636097093126" />
+      <entry key="H2" value="45.20516830919453" />
+      <entry key="H4" value="45.59870550182898" />
+      <entry key="D1" value="45.932570940183076" />
+      <entry key="W1" value="45.990353785052065" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 4,
@@ -78,7 +142,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1794670350991</updated>
-      <workItem from="1794670352003" duration="1830000" />
+      <workItem from="1794670352003" duration="3161000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -88,7 +152,15 @@
       <option name="project" value="LOCAL" />
       <updated>1794670904026</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Updated AGENTS.md">
+      <option name="closed" value="true" />
+      <created>1794672705675</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1794672705675</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -96,6 +168,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+    <MESSAGE value="Updated AGENTS.md" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated AGENTS.md" />
   </component>
 </project>
