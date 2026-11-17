@@ -20,12 +20,12 @@ function configuration() {
   return { url, key };
 }
 
-async function request(path: string, init?: RequestInit): Promise<unknown> {
+async function request(path: string, init?: RequestInit, resource = 'demo_books'): Promise<unknown> {
   const { url, key } = configuration();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(`${url}/rest/v1/demo_books${path}`, {
+    const response = await fetch(`${url}/rest/v1/${resource}${path}`, {
       ...init,
       signal: controller.signal,
       headers: { apikey: key, 'Content-Type': 'application/json', ...init?.headers },
@@ -53,6 +53,17 @@ export async function fetchSharedTickets(): Promise<LocalTicket[]> {
   const data = await request('?select=*&order=created_at.desc,id.desc&limit=100');
   if (!Array.isArray(data)) throw new Error('The database returned an unexpected response.');
   return (data as BookRow[]).map(fromRow);
+}
+
+/** Cancel one shared demo listing; direct table DELETE remains forbidden. */
+export async function deleteSharedTicket(id: string): Promise<void> {
+  if (!/^BFL-[A-Z0-9-]{3,70}$/.test(id)) throw new Error('A valid ticket ID is required.');
+  const deleted = await request('', {
+    method: 'POST',
+    body: JSON.stringify({ ticket_id: id }),
+  }, 'rpc/cancel_demo_book');
+  // Zero is also success: another device or a previous timed-out attempt removed it.
+  if (deleted !== 0 && deleted !== 1) throw new Error('The cancellation could not be verified. Please retry.');
 }
 
 /** Insert-only and idempotent: a retry uses the same ticket ID, never overwrites a row. */

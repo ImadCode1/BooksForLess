@@ -1,16 +1,16 @@
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View, useColorScheme, useWindowDimensions } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { Text, View, useColorScheme } from 'react-native';
 
 import type { LocalTicket } from '@/types/local-ticket';
-import { formatCad, ticketQrValue } from '@/utils/tickets';
+import { useBookFeedback } from '@/services/book-feedback';
+import { formatCad } from '@/utils/tickets';
+import { TicketCode } from './ticket-code';
 import { palette, ui } from './ui';
 
 export function TicketCard({ ticket, action, showPhoto = true }: { ticket: LocalTicket; action?: ReactNode; showPhoto?: boolean }) {
   useColorScheme();
-  const { width } = useWindowDimensions();
-  const qrSize = Math.max(120, Math.min(200, width - 136));
+  const { completed } = useBookFeedback(`sale:${ticket.id}`);
   return (
     <View style={[ui.card, { padding: 0, overflow: 'hidden' }]}>
       <View style={{ height: 5, backgroundColor: palette.blue }} />
@@ -28,20 +28,13 @@ export function TicketCard({ ticket, action, showPhoto = true }: { ticket: Local
         </View>
         {action}
       </View>
-      <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: palette.line }} />
-      <View style={{ padding: 20, paddingTop: 4, gap: 16 }}>
-        <View style={styles.qr} accessible accessibilityLabel={`QR ticket ${ticket.id}`}>
-          <QRCode value={ticketQrValue(ticket)} size={qrSize} quietZone={18} color="#000000" backgroundColor="#FFFFFF" />
+      {!completed ? <>
+        <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: palette.line }} />
+        <View style={{ padding: 20, paddingTop: 4, gap: 16 }}>
+          <TicketCode ticket={ticket} />
+          <Text selectable style={ui.caption}>ISBN {ticket.book.isbn}</Text>
         </View>
-        <Text selectable style={styles.id}>{ticket.id}</Text>
-        <Text style={ui.body}>Keep this ticket for the proposed campus co-op drop-off.</Text>
-        <Text selectable style={ui.caption}>ISBN {ticket.book.isbn}</Text>
-      </View>
+      </> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  qr: { alignSelf: 'center', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden' },
-  id: { textAlign: 'center', fontSize: 14, color: palette.ink, fontWeight: '600' },
-});

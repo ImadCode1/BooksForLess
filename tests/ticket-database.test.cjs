@@ -16,7 +16,7 @@ function load(relative) {
   new Function('require', 'module', 'exports', output)(localRequire, module, module.exports);
   return module.exports;
 }
-const { saveSharedTicket, fetchSharedTickets } = load('src/services/ticket-database.ts');
+const { saveSharedTicket, fetchSharedTickets, deleteSharedTicket } = load('src/services/ticket-database.ts');
 const ticket = {
   id: 'BFL-DEMO-ALGORITHMS',
   book: { isbn: '9780262033848', title: 'Introduction to Algorithms', authors: ['Thomas H. Cormen', 'Charles E. Leiserson', 'Ronald L. Rivest', 'Clifford Stein'], source: 'demo' },
@@ -78,6 +78,40 @@ test('reloaded shared books never contain another device photo path', async (t) 
   const result = await fetchSharedTickets();
   assert.equal(result[0].photoUri, '');
   assert.equal(result[0].priceCents, 2500);
+});
+
+test('cancellation calls only the single-ticket RPC and accepts already-deleted retries', async (t) => {
+  configureTest(t);
+  let result = 1;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    assert.equal(url, 'https://example.supabase.co/rest/v1/rpc/cancel_demo_book');
+    assert.equal(init.method, 'POST');
+    assert.deepEqual(JSON.parse(init.body), { ticket_id: ticket.id });
+    return { ok: true, json: async () => result };
+  });
+  await deleteSharedTicket(ticket.id);
+  result = 0;
+  await deleteSharedTicket(ticket.id);
+});
+
+test('invalid ticket IDs never send a cancellation request', async (t) => {
+  configureTest(t);
+  t.mock.method(globalThis, 'fetch', async () => { throw new Error('Must not fetch'); });
+  for (const id of ['', 'BFL-', 'invalid', 'BFL-ABC?delete=all']) {
+    await assert.rejects(deleteSharedTicket(id), /valid ticket ID/);
+  }
+  assert.equal(globalThis.fetch.mock.callCount(), 0);
+});
+
+test('failed or unverifiable cancellation is not reported as success', async (t) => {
+  configureTest(t);
+  let response = { ok: false, status: 403 };
+  t.mock.method(globalThis, 'fetch', async () => response);
+  await assert.rejects(deleteSharedTicket(ticket.id), /403/);
+  for (const result of [null, 2, '1', {}]) {
+    response = { ok: true, json: async () => result };
+    await assert.rejects(deleteSharedTicket(ticket.id), /could not be verified/);
+  }
 });
 
 test('live public API saves a seeded demo book, retries safely, and rejects edits/deletes', {

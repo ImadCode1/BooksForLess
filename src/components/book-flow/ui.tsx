@@ -11,6 +11,9 @@ export const palette = {
   line: Platform.select({ ios: Color.ios.separator, android: Color.android.dynamic.outlineVariant, default: '#D1D1D6' })!,
   soft: Platform.select({ ios: Color.ios.tertiarySystemFill, android: Color.android.dynamic.surfaceContainerHighest, default: '#E5E5EA' })!,
   accentText: Platform.select({ ios: Color.ios.systemBlue, android: Color.android.dynamic.primary, default: '#2057D4' })!,
+  // Keep destructive labels and white-on-red buttons above AA contrast.
+  danger: '#B42318',
+  dangerOnDark: '#FF8A80',
   inputBorder: '#7A879D',
 };
 

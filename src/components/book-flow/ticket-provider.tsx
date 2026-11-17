@@ -1,6 +1,6 @@
 import { createContext, type PropsWithChildren, use, useCallback, useEffect, useRef, useState } from 'react';
 
-import { fetchSharedTickets, saveSharedTicket } from '@/services/ticket-database';
+import { deleteSharedTicket, fetchSharedTickets, saveSharedTicket } from '@/services/ticket-database';
 import type { LocalTicket } from '@/types/local-ticket';
 
 const TicketContext = createContext<{
@@ -9,6 +9,7 @@ const TicketContext = createContext<{
   error: string;
   refresh: () => Promise<void>;
   addTicket: (ticket: LocalTicket) => Promise<LocalTicket>;
+  removeTicket: (id: string) => Promise<void>;
 } | null>(null);
 
 export function TicketProvider({ children }: PropsWithChildren) {
@@ -56,7 +57,14 @@ export function TicketProvider({ children }: PropsWithChildren) {
     if (active.current) setTickets((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
     return saved;
   }
-  return <TicketContext value={{ tickets, loading, error, refresh, addTicket }}>{children}</TicketContext>;
+
+  async function removeTicket(id: string) {
+    await deleteSharedTicket(id);
+    saveVersion.current += 1;
+    if (active.current) setTickets((current) => current.filter((ticket) => ticket.id !== id));
+  }
+
+  return <TicketContext value={{ tickets, loading, error, refresh, addTicket, removeTicket }}>{children}</TicketContext>;
 }
 
 export function useTickets() {

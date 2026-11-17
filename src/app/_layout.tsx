@@ -35,6 +35,22 @@ export default function RootLayout() {
                 options={{ title: "Pickup ticket", headerBackTitle: "Back" }}
               />
               <Stack.Screen
+                name="listing/[id]"
+                options={{
+                  title: "Book details",
+                  headerBackTitle: "My Books",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerTitleStyle: { color: palette.ink },
+                  headerTintColor: palette.ink,
+                  headerTransparent: false,
+                  headerStyle: { backgroundColor: palette.background },
+                  headerLargeStyle: { backgroundColor: palette.background },
+                  headerLargeTitleShadowVisible: false,
+                  headerBlurEffect: "none",
+                  scrollEdgeEffects: { top: "hidden" },
+                }}
+              />
+              <Stack.Screen
                 name="review"
                 options={{ title: "Review", headerBackTitle: "Back" }}
               />

@@ -18,7 +18,7 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Scan</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="barcode.viewfinder" md="barcode_scanner" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="my-books">
+      <NativeTabs.Trigger name="my-books" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>My Books</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="books.vertical" md="book_2" />
       </NativeTabs.Trigger>

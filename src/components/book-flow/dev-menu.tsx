@@ -3,19 +3,22 @@ import { useState } from 'react';
 import { Modal, Pressable, Text, View, useColorScheme } from 'react-native';
 
 import { ActionButton, palette, ui } from '@/components/book-flow/ui';
+import { ListingIcon } from './listing-icon';
+import { useListingColors } from './listing-theme';
 
-export function DevMenu({ busy, onPreview, onReset }: {
-  busy: boolean; onPreview: () => void; onReset: () => void;
+export function DevMenu({ busy, onPreview, onReset, plain = false }: {
+  busy: boolean; onPreview: () => void; onReset: () => void; plain?: boolean;
 }) {
   useColorScheme();
+  const colors = useListingColors();
   const [open, setOpen] = useState(false);
   const trigger = (
     <View
       accessible={process.env.EXPO_OS !== 'web'}
       accessibilityRole={process.env.EXPO_OS === 'web' ? undefined : 'button'}
       accessibilityLabel={process.env.EXPO_OS === 'web' ? undefined : 'Developer settings'}
-      style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: palette.soft }}>
-      <Text style={{ fontSize: 26, lineHeight: 30, color: palette.accentText }}>•••</Text>
+      style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: plain ? 'transparent' : palette.soft }}>
+      {plain ? <ListingIcon name="ellipsis" color={colors.ink} size={24} /> : <Text style={{ fontSize: 26, lineHeight: 30, color: palette.accentText }}>•••</Text>}
     </View>
   );
   if (process.env.EXPO_OS === 'web') {

@@ -6,12 +6,14 @@ import QRCode from "react-native-qrcode-svg";
 import { ActionButton, palette, ui } from "@/components/book-flow/ui";
 import { formatPrice } from "@/data/books";
 import { useOrders } from "@/services/orders";
+import { useBookFeedback } from "@/services/book-feedback";
 import { pickupQrValue } from "@/utils/pickup";
 
 export default function PickupScreen() {
   useColorScheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const order = useOrders().find((item) => item.id === id);
+  const { completed, rating } = useBookFeedback(`purchase:${id}`);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const qrSize = Math.max(120, Math.min(180, width - 116));
@@ -25,22 +27,29 @@ export default function PickupScreen() {
         <View style={ui.card}>
           <Text selectable accessibilityRole="header" style={ui.title}>{order.title}</Text>
           <Text selectable style={ui.label}>{order.condition} · {formatPrice(order.price)}</Text>
-          <View
-            accessible
-            accessibilityLabel={`Pickup QR ticket ${order.id}`}
-            style={{ alignSelf: "center", backgroundColor: "#FFFFFF", borderRadius: 8, overflow: "hidden" }}>
-            <QRCode
-              value={pickupQrValue(order)}
-              size={qrSize}
-              quietZone={18}
-              color="#000000"
-              backgroundColor="#FFFFFF"
-            />
-          </View>
-          <Text selectable style={[ui.caption, { textAlign: "center" }]}>{order.id}</Text>
+          {completed ? (
+            <View style={{ gap: 8 }}>
+              <Text style={ui.label}>Book received</Text>
+              <Text style={ui.body}>Your pickup is complete. You no longer need this QR ticket.</Text>
+            </View>
+          ) : <>
+            <View
+              accessible
+              accessibilityLabel={`Pickup QR ticket ${order.id}`}
+              style={{ alignSelf: "center", backgroundColor: "#FFFFFF", borderRadius: 8, overflow: "hidden" }}>
+              <QRCode
+                value={pickupQrValue(order)}
+                size={qrSize}
+                quietZone={18}
+                color="#000000"
+                backgroundColor="#FFFFFF"
+              />
+            </View>
+            <Text selectable style={[ui.caption, { textAlign: "center" }]}>{order.id}</Text>
+          </>}
         </View>
-        <Text style={ui.caption}>For the proposed campus co-op pickup. Find this code again in My Books.</Text>
-        <ActionButton title="Back to My Books" onPress={() => router.navigate({ pathname: "/my-books", params: { tab: "purchases" } })} />
+        {!completed ? <Text style={ui.caption}>For the proposed campus co-op pickup. Find this code again in My Books.</Text> : null}
+        <ActionButton title="Back to My Books" onPress={() => router.navigate({ pathname: "/my-books", params: { tab: completed && rating !== null ? "history" : "purchases" } })} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="View my orders"
